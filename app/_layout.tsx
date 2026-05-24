@@ -1,22 +1,19 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { IteoColors } from '@/constants/Colors';
+import { QueryProvider } from '@/providers/QueryProvider';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: 'welcome',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -24,7 +21,6 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
@@ -39,18 +35,89 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    <QueryProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="welcome" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="admin-notice" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="role-selection" options={{ headerShown: false }} />
+        <Stack.Screen name="kvkk" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="payments"
+          options={{
+            presentation: 'card',
+            headerShown: true,
+            title: 'Ödemeler',
+            headerStyle: { backgroundColor: IteoColors.black },
+            headerTintColor: IteoColors.white,
+          }}
+        />
+        <Stack.Screen
+          name="appointments"
+          options={{
+            presentation: 'card',
+            headerShown: true,
+            title: 'Randevular',
+            headerStyle: { backgroundColor: IteoColors.black },
+            headerTintColor: IteoColors.white,
+          }}
+        />
+        <Stack.Screen
+          name="ohs"
+          options={{
+            presentation: 'card',
+            headerShown: true,
+            title: 'İSG',
+            headerStyle: { backgroundColor: IteoColors.black },
+            headerTintColor: IteoColors.white,
+          }}
+        />
+        <Stack.Screen
+          name="news"
+          options={{
+            presentation: 'card',
+            headerShown: true,
+            title: 'Haberler',
+            headerStyle: { backgroundColor: IteoColors.black },
+            headerTintColor: IteoColors.white,
+          }}
+        />
+        <Stack.Screen
+          name="notifications"
+          options={{
+            presentation: 'card',
+            headerShown: true,
+            title: 'Bildirimler',
+            headerStyle: { backgroundColor: IteoColors.black },
+            headerTintColor: IteoColors.white,
+          }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{
+            presentation: 'card',
+            headerShown: true,
+            title: 'Ayarlar',
+            headerStyle: { backgroundColor: IteoColors.black },
+            headerTintColor: IteoColors.white,
+          }}
+        />
+        <Stack.Screen
+          name="vehicles"
+          options={{
+            presentation: 'card',
+            headerShown: true,
+            title: 'Plaka / Araçlarım',
+            headerStyle: { backgroundColor: IteoColors.black },
+            headerTintColor: IteoColors.white,
+          }}
+        />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
-    </ThemeProvider>
+      <StatusBar style="light" />
+    </QueryProvider>
   );
 }
