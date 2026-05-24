@@ -2,13 +2,13 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { IteoColors } from '@/constants/Colors';
-import { supabase } from '@/lib/supabase';
+import { logoutSession } from '@/lib/auth';
 
 export default function AdminNoticeScreen() {
   const adminUrl = process.env.EXPO_PUBLIC_ADMIN_URL ?? 'http://localhost:3002/login';
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await logoutSession();
     router.replace('/welcome');
   }
 

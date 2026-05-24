@@ -1,27 +1,21 @@
 import { useEffect, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { getAccessToken, logoutSession } from '@/lib/auth';
 
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    getAccessToken().then((token) => {
+      setIsAuthenticated(!!token);
       setLoading(false);
     });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
-
-    return () => listener.subscription.unsubscribe();
   }, []);
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await logoutSession();
+    setIsAuthenticated(false);
   }
 
-  return { session, loading, isAuthenticated: !!session, signOut };
+  return { loading, isAuthenticated, signOut };
 }

@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { IteoColors } from '@/constants/Colors';
-import { supabase } from '@/lib/supabase';
+import { requestOtp, verifyOtp } from '@/lib/auth';
 import {
   getLoginIntent,
   loginPortalCopy,
@@ -29,7 +29,7 @@ function friendlyAuthError(message: string): string {
   if (m.includes('phone') || m.includes('sms')) {
     return 'Telefon numaranız doğrulanamadı. Lütfen tekrar deneyin.';
   }
-  return 'Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.';
+  return message || 'Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.';
 }
 
 export default function LoginScreen() {
@@ -57,38 +57,34 @@ export default function LoginScreen() {
 
   const copy = loginPortalCopy[portalRole];
 
-  async function requestOtp() {
+  async function handleRequestOtp() {
     setLoading(true);
     setError(null);
     const formatted = phone.startsWith('+') ? phone : `+90${phone.replace(/\D/g, '')}`;
 
-    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: formatted });
-
-    setLoading(false);
-    if (otpError) {
-      setError(friendlyAuthError(otpError.message));
-      return;
+    try {
+      await requestOtp(formatted);
+      setStep('otp');
+    } catch (err) {
+      setError(friendlyAuthError((err as Error).message));
+    } finally {
+      setLoading(false);
     }
-    setStep('otp');
   }
 
-  async function verifyOtp() {
+  async function handleVerifyOtp() {
     setLoading(true);
     setError(null);
     const formatted = phone.startsWith('+') ? phone : `+90${phone.replace(/\D/g, '')}`;
 
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      phone: formatted,
-      token: code,
-      type: 'sms',
-    });
-
-    setLoading(false);
-    if (verifyError) {
-      setError(friendlyAuthError(verifyError.message));
-      return;
+    try {
+      await verifyOtp(formatted, code);
+      router.replace('/(tabs)');
+    } catch (err) {
+      setError(friendlyAuthError((err as Error).message));
+    } finally {
+      setLoading(false);
     }
-    router.replace('/(tabs)');
   }
 
   return (
@@ -117,7 +113,7 @@ export default function LoginScreen() {
               value={phone}
               onChangeText={setPhone}
             />
-            <Pressable style={styles.button} onPress={requestOtp} disabled={loading}>
+            <Pressable style={styles.button} onPress={handleRequestOtp} disabled={loading}>
               {loading ? (
                 <ActivityIndicator color={IteoColors.black} />
               ) : (
@@ -136,7 +132,7 @@ export default function LoginScreen() {
               value={code}
               onChangeText={setCode}
             />
-            <Pressable style={styles.button} onPress={verifyOtp} disabled={loading}>
+            <Pressable style={styles.button} onPress={handleVerifyOtp} disabled={loading}>
               {loading ? (
                 <ActivityIndicator color={IteoColors.black} />
               ) : (

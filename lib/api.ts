@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { resolveAccessToken, refreshAccessToken } from './auth';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 
@@ -11,12 +11,11 @@ export interface ApiResponse<T> {
 }
 
 export async function getAccessToken(): Promise<string | null> {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? null;
+  return resolveAccessToken();
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = await getAccessToken();
+  let token = await resolveAccessToken();
   if (!token) throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
 
   const headers: Record<string, string> = {
@@ -28,7 +27,15 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
+  let response = await fetch(`${API_URL}${path}`, { ...options, headers });
+
+  if (response.status === 401) {
+    token = await refreshAccessToken();
+    if (!token) throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+    headers.Authorization = `Bearer ${token}`;
+    response = await fetch(`${API_URL}${path}`, { ...options, headers });
+  }
+
   const json = (await response.json()) as ApiResponse<T> & T;
 
   if (!response.ok) {
