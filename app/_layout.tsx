@@ -35,86 +35,41 @@ export default function RootLayout() {
     return null;
   }
 
+  const stackScreens: Array<{ name: string; title: string }> = [
+    { name: 'ohs', title: 'İSG' },
+    { name: 'news', title: 'Haberler' },
+    { name: 'notifications', title: 'Bildirimler' },
+    { name: 'settings', title: 'Ayarlar' },
+    { name: 'help', title: 'Yardım & Destek' },
+    { name: 'forgotten-items', title: 'Unutulan Eşya' },
+  ];
+
   return (
     <QueryProvider>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          headerStyle: { backgroundColor: IteoColors.black },
+          headerTintColor: IteoColors.white,
+          headerTitleStyle: { fontWeight: '800', fontSize: 18 },
+          headerShadowVisible: false,
+          headerBackTitle: '',
+          contentStyle: { backgroundColor: IteoColors.gray100 },
+        }}>
         <Stack.Screen name="welcome" />
         <Stack.Screen name="login" />
-        <Stack.Screen name="admin-notice" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="role-selection" options={{ headerShown: false }} />
-        <Stack.Screen name="kvkk" options={{ headerShown: false }} />
+        <Stack.Screen name="admin-notice" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="role-selection" />
+        <Stack.Screen name="kvkk" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="payments"
-          options={{
-            presentation: 'card',
-            headerShown: true,
-            title: 'Ödemeler',
-            headerStyle: { backgroundColor: IteoColors.black },
-            headerTintColor: IteoColors.white,
-          }}
-        />
-        <Stack.Screen
-          name="appointments"
-          options={{
-            presentation: 'card',
-            headerShown: true,
-            title: 'Randevular',
-            headerStyle: { backgroundColor: IteoColors.black },
-            headerTintColor: IteoColors.white,
-          }}
-        />
-        <Stack.Screen
-          name="ohs"
-          options={{
-            presentation: 'card',
-            headerShown: true,
-            title: 'İSG',
-            headerStyle: { backgroundColor: IteoColors.black },
-            headerTintColor: IteoColors.white,
-          }}
-        />
-        <Stack.Screen
-          name="news"
-          options={{
-            presentation: 'card',
-            headerShown: true,
-            title: 'Haberler',
-            headerStyle: { backgroundColor: IteoColors.black },
-            headerTintColor: IteoColors.white,
-          }}
-        />
-        <Stack.Screen
-          name="notifications"
-          options={{
-            presentation: 'card',
-            headerShown: true,
-            title: 'Bildirimler',
-            headerStyle: { backgroundColor: IteoColors.black },
-            headerTintColor: IteoColors.white,
-          }}
-        />
-        <Stack.Screen
-          name="settings"
-          options={{
-            presentation: 'card',
-            headerShown: true,
-            title: 'Ayarlar',
-            headerStyle: { backgroundColor: IteoColors.black },
-            headerTintColor: IteoColors.white,
-          }}
-        />
-        <Stack.Screen
-          name="vehicles"
-          options={{
-            presentation: 'card',
-            headerShown: true,
-            title: 'Plaka / Araçlarım',
-            headerStyle: { backgroundColor: IteoColors.black },
-            headerTintColor: IteoColors.white,
-          }}
-        />
+        {stackScreens.map((screen) => (
+          <Stack.Screen
+            key={screen.name}
+            name={screen.name}
+            options={{ presentation: 'card', headerShown: true, title: screen.title }}
+          />
+        ))}
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
       <StatusBar style="light" />

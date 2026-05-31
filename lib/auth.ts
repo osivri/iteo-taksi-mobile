@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { getApiBaseUrl } from './config';
 
 const KEYS = {
   access: 'iteo_access_token',
@@ -63,8 +64,6 @@ export async function getUserRole(): Promise<string | null> {
   return getItem(KEYS.role);
 }
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
-
 interface AuthApiResponse<T> {
   success: boolean;
   data?: T;
@@ -85,7 +84,7 @@ export async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = await getRefreshToken();
   if (!refreshToken) return null;
 
-  const response = await fetch(`${API_URL}/auth/refresh`, {
+  const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken }),
@@ -112,8 +111,57 @@ export async function resolveAccessToken(): Promise<string | null> {
   return refreshAccessToken();
 }
 
+export async function memberLogin(
+  email: string,
+  password: string,
+): Promise<AuthSessionPayload & { user?: unknown }> {
+  const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response, 'Giriş yapılamadı'));
+  }
+
+  const json = (await response.json()) as AuthApiResponse<AuthSessionPayload & { user?: unknown }>;
+  if (!json.data?.accessToken || !json.data.refreshToken) {
+    throw new Error('Giriş yanıtı geçersiz');
+  }
+
+  await setSession(json.data);
+  return json.data;
+}
+
+export async function memberRegister(
+  email: string,
+  password: string,
+  intendedRole?: 'USER' | 'DRIVER' | 'PLATE_OWNER',
+): Promise<(AuthSessionPayload & { user?: unknown }) | { requiresEmailConfirmation?: boolean; message?: string }> {
+  const response = await fetch(`${getApiBaseUrl()}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, intendedRole }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response, 'Kayıt oluşturulamadı'));
+  }
+
+  const json = (await response.json()) as AuthApiResponse<
+    (AuthSessionPayload & { user?: unknown }) | { requiresEmailConfirmation?: boolean; message?: string }
+  >;
+
+  if (json.data && 'accessToken' in json.data && json.data.accessToken && json.data.refreshToken) {
+    await setSession(json.data);
+  }
+
+  return json.data ?? {};
+}
+
 export async function requestOtp(phone: string): Promise<void> {
-  const response = await fetch(`${API_URL}/auth/request-otp`, {
+  const response = await fetch(`${getApiBaseUrl()}/auth/request-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone }),
@@ -125,7 +173,7 @@ export async function requestOtp(phone: string): Promise<void> {
 }
 
 export async function verifyOtp(phone: string, code: string): Promise<AuthSessionPayload & { user?: unknown }> {
-  const response = await fetch(`${API_URL}/auth/verify-otp`, {
+  const response = await fetch(`${getApiBaseUrl()}/auth/verify-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, code }),
@@ -147,7 +195,7 @@ export async function verifyOtp(phone: string, code: string): Promise<AuthSessio
 export async function logoutSession(): Promise<void> {
   const token = await getAccessToken();
   if (token) {
-    await fetch(`${API_URL}/auth/logout`, {
+    await fetch(`${getApiBaseUrl()}/auth/logout`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     }).catch(() => undefined);

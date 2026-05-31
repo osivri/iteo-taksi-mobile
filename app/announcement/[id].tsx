@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import Colors, { IteoColors } from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
+import { fontSize, spacing } from '@/constants/theme';
 import { api, ApiResponse } from '@/lib/api';
+import { Badge, Card, ErrorText, Loader, useTheme } from '@/components/ui';
 
 interface AnnouncementDetail {
   id: string;
@@ -16,8 +16,7 @@ interface AnnouncementDetail {
 
 export default function AnnouncementDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const theme = useTheme();
   const [item, setItem] = useState<AnnouncementDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,35 +32,26 @@ export default function AnnouncementDetailScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Duyuru',
-          headerStyle: { backgroundColor: IteoColors.black },
-          headerTintColor: IteoColors.white,
-        }}
-      />
-      <ScrollView style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
+      <Stack.Screen options={{ headerShown: true, title: 'Duyuru' }} />
+      <ScrollView style={[styles.container, { backgroundColor: theme.backgroundSecondary }]} contentContainerStyle={styles.content}>
         {loading ? (
-          <ActivityIndicator color={IteoColors.yellow} style={{ marginTop: 32 }} />
+          <Loader />
         ) : error ? (
-          <Text style={styles.error}>{error}</Text>
+          <ErrorText>{error}</ErrorText>
         ) : item ? (
-          <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Card>
             <View style={styles.badgeRow}>
-              <Text style={styles.badge}>{item.category}</Text>
-              {item.priority === 'URGENT' && <Text style={styles.urgent}>Acil</Text>}
+              <Badge label={item.category} />
+              {item.priority === 'URGENT' ? <Badge label="Acil" tone="danger" /> : null}
             </View>
             <Text style={[styles.title, { color: theme.text }]}>{item.title}</Text>
-            {item.publishedAt && (
-              <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 6 }}>
+            {item.publishedAt ? (
+              <Text style={{ color: theme.textSecondary, fontSize: fontSize.sm, marginTop: spacing.sm }}>
                 {new Date(item.publishedAt).toLocaleString('tr-TR')}
               </Text>
-            )}
-            <Text style={{ color: theme.textSecondary, marginTop: 20, lineHeight: 24, fontSize: 15 }}>
-              {item.content}
-            </Text>
-          </View>
+            ) : null}
+            <Text style={{ color: theme.textSecondary, marginTop: spacing.lg, lineHeight: 24, fontSize: fontSize.md }}>{item.content}</Text>
+          </Card>
         ) : null}
       </ScrollView>
     </>
@@ -70,19 +60,7 @@ export default function AnnouncementDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  error: { color: '#FCA5A5', textAlign: 'center', margin: 16 },
-  card: { margin: 16, borderWidth: 1, borderRadius: 14, padding: 20 },
-  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  badge: {
-    backgroundColor: IteoColors.yellowLight,
-    color: IteoColors.black,
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  urgent: { color: '#DC2626', fontSize: 11, fontWeight: '700' },
-  title: { fontSize: 22, fontWeight: '800' },
+  content: { padding: spacing.lg },
+  badgeRow: { flexDirection: 'row', gap: spacing.sm },
+  title: { fontSize: fontSize.xxl, fontWeight: '900', marginTop: spacing.md, letterSpacing: -0.4 },
 });

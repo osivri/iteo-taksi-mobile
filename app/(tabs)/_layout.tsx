@@ -1,7 +1,7 @@
-import { SymbolView } from 'expo-symbols';
 import { Redirect, Tabs } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 
 import Colors, { IteoColors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { api, ApiResponse } from '@/lib/api';
 import { isOnboardingDone, needsKvkkAcceptance, needsProfileSetup } from '@/lib/onboarding';
+import { isTabVisible, RoleTabName, tabLabel, toMemberRole, type MemberRole } from '@/lib/dashboard';
 
 interface Profile {
   firstName: string;
@@ -19,6 +20,15 @@ interface Profile {
   kvkkAcceptedAt: string | null;
 }
 
+const tabIcons: Record<RoleTabName, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
+  index: { active: 'home', inactive: 'home-outline' },
+  finance: { active: 'wallet', inactive: 'wallet-outline' },
+  vehicles: { active: 'car-sport', inactive: 'car-sport-outline' },
+  announcements: { active: 'megaphone', inactive: 'megaphone-outline' },
+  payments: { active: 'card', inactive: 'card-outline' },
+  appointments: { active: 'calendar', inactive: 'calendar-outline' },
+};
+
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
   const { loading, isAuthenticated } = useAuth();
@@ -27,6 +37,7 @@ export default function TabLayout() {
   const [profileOk, setProfileOk] = useState<boolean | null>(null);
   const [kvkkOk, setKvkkOk] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [role, setRole] = useState<MemberRole>('USER');
 
   usePushNotifications(isAuthenticated && kvkkOk === true);
 
@@ -55,6 +66,7 @@ export default function TabLayout() {
           return;
         }
 
+        setRole(toMemberRole(profile.role));
         setProfileOk(!needsProfileSetup(profile));
         setKvkkOk(!needsKvkkAcceptance(profile));
       } catch {
@@ -96,54 +108,57 @@ export default function TabLayout() {
     return <Redirect href="/kvkk" />;
   }
 
+  const roleTab = (name: RoleTabName) => ({
+    title: tabLabel(name, role),
+    href: isTabVisible(name, role) ? undefined : (null as never),
+    tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
+      <Ionicons name={focused ? tabIcons[name].active : tabIcons[name].inactive} size={23} color={color} />
+    ),
+  });
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: IteoColors.yellow,
         tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? IteoColors.blackSoft : IteoColors.white,
-          borderTopColor: Colors[colorScheme].border,
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: 14,
+          height: 72,
+          borderRadius: 24,
+          borderTopWidth: 0,
+          backgroundColor: colorScheme === 'dark' ? '#141414' : IteoColors.white,
+          shadowColor: '#000',
+          shadowOpacity: 0.16,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 12,
+          paddingTop: 10,
+          paddingBottom: 12,
         },
+        tabBarItemStyle: { borderRadius: 18 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '800', marginTop: 2 },
         headerShown: useClientOnlyValue(false, false),
       }}>
+      {/* Sıralama alt çubuktaki görünümü belirler */}
+      <Tabs.Screen name="index" options={roleTab('index')} />
+      <Tabs.Screen name="finance" options={roleTab('finance')} />
+      <Tabs.Screen name="vehicles" options={roleTab('vehicles')} />
+      <Tabs.Screen name="announcements" options={roleTab('announcements')} />
+      <Tabs.Screen name="payments" options={roleTab('payments')} />
+      <Tabs.Screen name="appointments" options={roleTab('appointments')} />
       <Tabs.Screen
-        name="index"
+        name="two"
         options={{
-          title: 'Ana Sayfa',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'house.fill', android: 'home', web: 'home' }} tintColor={color} size={24} />
+          title: 'Menü',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={23} color={color} />
           ),
         }}
       />
-      <Tabs.Screen
-        name="finance"
-        options={{
-          title: 'Muhasebe',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'chart.bar.fill', android: 'bar_chart', web: 'bar_chart' }} tintColor={color} size={24} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="announcements"
-        options={{
-          title: 'Duyurular',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'megaphone.fill', android: 'campaign', web: 'campaign' }} tintColor={color} size={24} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profil',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'person.fill', android: 'person', web: 'person' }} tintColor={color} size={24} />
-          ),
-        }}
-      />
-      <Tabs.Screen name="two" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null, title: 'Profil' }} />
     </Tabs>
   );
 }

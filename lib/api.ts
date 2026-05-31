@@ -1,6 +1,5 @@
 import { resolveAccessToken, refreshAccessToken } from './auth';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+import { getApiBaseUrl } from './config';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -27,13 +26,13 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     headers['Content-Type'] = 'application/json';
   }
 
-  let response = await fetch(`${API_URL}${path}`, { ...options, headers });
+  let response = await fetch(`${getApiBaseUrl()}${path}`, { ...options, headers });
 
   if (response.status === 401) {
     token = await refreshAccessToken();
     if (!token) throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
     headers.Authorization = `Bearer ${token}`;
-    response = await fetch(`${API_URL}${path}`, { ...options, headers });
+    response = await fetch(`${getApiBaseUrl()}${path}`, { ...options, headers });
   }
 
   const json = (await response.json()) as ApiResponse<T> & T;

@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import Colors, { IteoColors } from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
+import { Ionicons } from '@expo/vector-icons';
+import { IteoColors } from '@/constants/Colors';
+import { fontSize, radius, shadow, spacing } from '@/constants/theme';
 import { api, ApiResponse } from '@/lib/api';
+import { Badge, EmptyState, ErrorText, Loader, useTheme } from '@/components/ui';
 
 interface NewsItem {
   id: string;
@@ -18,8 +20,7 @@ interface NewsDetail extends NewsItem {
 }
 
 export default function NewsScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const theme = useTheme();
   const [items, setItems] = useState<NewsItem[]>([]);
   const [selected, setSelected] = useState<NewsDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,82 +56,73 @@ export default function NewsScreen() {
 
   if (selected) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
-        <Pressable onPress={() => setSelected(null)} style={styles.backBtn}>
-          <Text style={styles.backText}>← Geri</Text>
+      <ScrollView
+        style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}>
+        <Pressable onPress={() => setSelected(null)} style={styles.backBtn} hitSlop={8}>
+          <Ionicons name="chevron-back" size={18} color={IteoColors.yellowDark} />
+          <Text style={styles.backText}>Haberlere dön</Text>
         </Pressable>
-        <View style={[styles.detailCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Text style={styles.badge}>{selected.category}</Text>
+        <View style={[styles.detailCard, { backgroundColor: theme.card, borderColor: theme.border }, theme.scheme === 'light' ? shadow.card : null]}>
+          <Badge label={selected.category} />
           <Text style={[styles.detailTitle, { color: theme.text }]}>{selected.title}</Text>
-          {selected.publishedAt && (
-            <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 4 }}>
+          {selected.publishedAt ? (
+            <Text style={{ color: theme.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs }}>
               {new Date(selected.publishedAt).toLocaleDateString('tr-TR')}
             </Text>
-          )}
-          <Text style={{ color: theme.textSecondary, marginTop: 12, lineHeight: 22, fontWeight: '600' }}>
-            {selected.summary}
-          </Text>
-          <Text style={{ color: theme.textSecondary, marginTop: 16, lineHeight: 24 }}>
-            {selected.content}
-          </Text>
+          ) : null}
+          <Text style={{ color: theme.text, marginTop: spacing.md, lineHeight: 22, fontWeight: '700' }}>{selected.summary}</Text>
+          <Text style={{ color: theme.textSecondary, marginTop: spacing.lg, lineHeight: 24 }}>{selected.content}</Text>
         </View>
-      </View>
+      </ScrollView>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
-      {loading || detailLoading ? (
-        <ActivityIndicator color={IteoColors.yellow} style={{ marginTop: 32 }} />
-      ) : error ? (
-        <Text style={styles.error}>{error}</Text>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16, gap: 10 }}
-          ListEmptyComponent={<Text style={{ color: theme.textSecondary, textAlign: 'center' }}>Haber yok</Text>}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => openDetail(item.id)}
-              style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <Text style={styles.badge}>{item.category}</Text>
-              <Text style={[styles.title, { color: theme.text }]}>{item.title}</Text>
-              <Text style={{ color: theme.textSecondary, marginTop: 6, lineHeight: 20 }} numberOfLines={2}>
-                {item.summary}
+      {error ? <ErrorText>{error}</ErrorText> : null}
+      <FlatList
+        data={loading || detailLoading ? [] : items}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={loading || detailLoading ? <Loader /> : <EmptyState icon="newspaper-outline" title="Haber yok" message="Yeni haberler burada listelenecek." />}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() => openDetail(item.id)}
+            style={({ pressed }) => [
+              styles.card,
+              { backgroundColor: theme.card, borderColor: theme.border },
+              theme.scheme === 'light' ? shadow.card : null,
+              pressed ? styles.pressed : null,
+            ]}>
+            <Badge label={item.category} />
+            <Text style={[styles.title, { color: theme.text }]}>{item.title}</Text>
+            <Text style={{ color: theme.textSecondary, marginTop: spacing.sm, lineHeight: 20 }} numberOfLines={2}>
+              {item.summary}
+            </Text>
+            {item.publishedAt ? (
+              <Text style={{ color: theme.textSecondary, fontSize: fontSize.xs, marginTop: spacing.sm }}>
+                {new Date(item.publishedAt).toLocaleDateString('tr-TR')}
               </Text>
-              {item.publishedAt && (
-                <Text style={{ color: theme.textSecondary, fontSize: 11, marginTop: 8 }}>
-                  {new Date(item.publishedAt).toLocaleDateString('tr-TR')}
-                </Text>
-              )}
-            </Pressable>
-          )}
-        />
-      )}
+            ) : null}
+          </Pressable>
+        )}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  error: { color: '#FCA5A5', textAlign: 'center', margin: 16 },
-  card: { borderWidth: 1, borderRadius: 14, padding: 16 },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: IteoColors.yellowLight,
-    color: IteoColors.black,
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  title: { fontSize: 16, fontWeight: '700' },
-  backBtn: { padding: 16 },
-  backText: { color: IteoColors.yellow, fontWeight: '700' },
-  detailCard: { marginHorizontal: 16, borderWidth: 1, borderRadius: 14, padding: 20 },
-  detailTitle: { fontSize: 20, fontWeight: '700', marginTop: 8 },
+  content: { padding: spacing.lg },
+  card: { borderWidth: 1, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.sm },
+  title: { fontSize: fontSize.lg, fontWeight: '800' },
+  pressed: { opacity: 0.9, transform: [{ scale: 0.995 }] },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.md },
+  backText: { color: IteoColors.yellowDark, fontWeight: '800', fontSize: fontSize.md },
+  detailCard: { borderWidth: 1, borderRadius: radius.xl, padding: spacing.xl, gap: spacing.xs },
+  detailTitle: { fontSize: fontSize.xxl, fontWeight: '900', marginTop: spacing.sm, letterSpacing: -0.4 },
 });

@@ -1,17 +1,11 @@
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
-import Colors, { IteoColors } from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
+import { Ionicons } from '@expo/vector-icons';
+import { IteoColors } from '@/constants/Colors';
+import { fontSize, radius, shadow, spacing } from '@/constants/theme';
 import { api, ApiResponse } from '@/lib/api';
+import { Button, Card, Field, Loader, SectionTitle, useTheme } from '@/components/ui';
 
 interface OhsContent {
   id: string;
@@ -21,8 +15,7 @@ interface OhsContent {
 }
 
 export default function OhsScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const theme = useTheme();
   const [items, setItems] = useState<OhsContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [question, setQuestion] = useState('');
@@ -58,59 +51,81 @@ export default function OhsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
-      <View style={[styles.chatBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <TextInput
-          style={[styles.input, { color: theme.text, borderColor: theme.border }]}
-          placeholder="İSG konusunda sorunuzu yazın"
-          placeholderTextColor={theme.textSecondary}
-          value={question}
-          onChangeText={setQuestion}
-        />
-        <Pressable style={styles.askBtn} onPress={askChatbot} disabled={asking}>
-          <Text style={styles.askBtnText}>{asking ? 'Yanıtlanıyor...' : 'İSG Danışmanına Sor'}</Text>
-        </Pressable>
-        {answer && <Text style={[styles.answer, { color: theme.text }]}>{answer}</Text>}
-        {sources.length > 0 && (
-          <View style={{ marginTop: 8, gap: 4 }}>
-            <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '600' }}>Kaynak içerikler</Text>
-            {sources.map((s, i) => (
-              <Text key={`${s.title}-${i}`} style={{ color: theme.textSecondary, fontSize: 11 }}>
-                · {s.title} ({s.type})
-              </Text>
-            ))}
+      <FlatList
+        data={loading ? [] : items}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={{ marginBottom: spacing.lg }}>
+            <Card>
+              <View style={styles.chatHead}>
+                <View style={styles.chatIcon}>
+                  <Ionicons name="shield-checkmark" size={20} color={IteoColors.black} />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={[styles.chatTitle, { color: theme.text }]}>İSG Danışmanı</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: fontSize.sm }}>İş sağlığı ve güvenliği sorularınızı yanıtlar.</Text>
+                </View>
+              </View>
+              <Field placeholder="İSG konusunda sorunuzu yazın" value={question} onChangeText={setQuestion} icon="chatbubble-ellipses-outline" />
+              <Button title={asking ? 'Yanıtlanıyor...' : 'Danışmana Sor'} variant="dark" icon="send" loading={asking} onPress={askChatbot} />
+              {answer ? (
+                <View style={[styles.answerBox, { backgroundColor: theme.backgroundSecondary }]}>
+                  <Text style={{ color: theme.text, lineHeight: 21 }}>{answer}</Text>
+                  {sources.length > 0 ? (
+                    <View style={{ marginTop: spacing.sm, gap: 3 }}>
+                      <Text style={{ color: theme.textSecondary, fontSize: fontSize.xs, fontWeight: '800' }}>KAYNAK İÇERİKLER</Text>
+                      {sources.map((s, i) => (
+                        <Text key={`${s.title}-${i}`} style={{ color: theme.textSecondary, fontSize: fontSize.xs }}>
+                          · {s.title} ({s.type})
+                        </Text>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+            </Card>
+            <SectionTitle style={{ marginTop: spacing.lg }}>Eğitim İçerikleri</SectionTitle>
           </View>
+        }
+        ListEmptyComponent={loading ? <Loader /> : null}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() => router.push(`/ohs/${item.id}`)}
+            style={({ pressed }) => [
+              styles.card,
+              { backgroundColor: theme.card, borderColor: theme.border },
+              theme.scheme === 'light' ? shadow.card : null,
+              pressed ? styles.pressed : null,
+            ]}>
+            <View style={styles.cardIcon}>
+              <Ionicons name="document-text-outline" size={18} color={IteoColors.black} />
+            </View>
+            <View style={styles.flex}>
+              <Text style={{ color: IteoColors.yellowDark, fontSize: fontSize.xs, fontWeight: '900', letterSpacing: 0.5 }}>
+                {item.type}
+              </Text>
+              <Text style={{ color: theme.text, fontWeight: '800', marginTop: 2, fontSize: fontSize.md }}>{item.title}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+          </Pressable>
         )}
-      </View>
-
-      {loading ? (
-        <ActivityIndicator color={IteoColors.yellow} style={{ marginTop: 24 }} />
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16, gap: 8 }}
-          ListHeaderComponent={<Text style={[styles.section, { color: theme.text }]}>Eğitim İçerikleri</Text>}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => router.push(`/ohs/${item.id}`)}
-              style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <Text style={{ color: IteoColors.yellow, fontSize: 11, fontWeight: '700' }}>{item.type}</Text>
-              <Text style={{ color: theme.text, fontWeight: '600', marginTop: 4 }}>{item.title}</Text>
-            </Pressable>
-          )}
-        />
-      )}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  chatBox: { margin: 16, borderWidth: 1, borderRadius: 14, padding: 16, gap: 10 },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
-  askBtn: { backgroundColor: IteoColors.black, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  askBtnText: { color: IteoColors.white, fontWeight: '700' },
-  answer: { lineHeight: 20, fontSize: 14 },
-  section: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  card: { borderWidth: 1, borderRadius: 12, padding: 14 },
+  flex: { flex: 1 },
+  content: { padding: spacing.lg },
+  chatHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
+  chatIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: IteoColors.yellow, alignItems: 'center', justifyContent: 'center' },
+  chatTitle: { fontSize: fontSize.lg, fontWeight: '900' },
+  answerBox: { borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md },
+  card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderRadius: radius.lg, padding: spacing.lg },
+  cardIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: IteoColors.yellowLight, alignItems: 'center', justifyContent: 'center' },
+  pressed: { opacity: 0.9, transform: [{ scale: 0.995 }] },
 });

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { api } from '@/lib/api';
@@ -21,6 +22,13 @@ export function usePushNotifications(enabled = true) {
     async function register() {
       if (!Device.isDevice) return;
 
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'Bildirimler',
+          importance: Notifications.AndroidImportance.MAX,
+        });
+      }
+
       const { status: existing } = await Notifications.getPermissionsAsync();
       let finalStatus = existing;
       if (existing !== 'granted') {
@@ -29,7 +37,14 @@ export function usePushNotifications(enabled = true) {
       }
       if (finalStatus !== 'granted') return;
 
-      const tokenData = await Notifications.getExpoPushTokenAsync();
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        Constants.easConfig?.projectId ??
+        process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
+
+      if (!projectId) return;
+
+      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
       const platform = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
 
       try {
@@ -42,6 +57,6 @@ export function usePushNotifications(enabled = true) {
       }
     }
 
-    register();
+    register().catch(() => undefined);
   }, [enabled]);
 }

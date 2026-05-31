@@ -1,20 +1,15 @@
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import Colors, { IteoColors } from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
+import { Ionicons } from '@expo/vector-icons';
+import { IteoColors } from '@/constants/Colors';
+import { fontSize, radius, SCREEN_BOTTOM_INSET, spacing } from '@/constants/theme';
 import { api, ApiResponse } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { Button, Card, ErrorText, Field, ListRow, Loader, useTheme } from '@/components/ui';
+import { roleDashboardTitles, type UserRole } from '@/lib/dashboard';
 
 interface Profile {
   firstName: string;
@@ -31,8 +26,7 @@ interface UploadResult {
 }
 
 export default function ProfileScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const theme = useTheme();
   const { signOut } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,14 +66,12 @@ export default function ProfileScreen() {
       setError('Galeri erişim izni gerekli.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.85,
       allowsEditing: true,
       aspect: [1, 1],
     });
-
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
@@ -93,7 +85,6 @@ export default function ProfileScreen() {
         name: 'profile.jpg',
         type: asset.mimeType ?? 'image/jpeg',
       } as unknown as Blob);
-
       const upload = await api.upload<ApiResponse<UploadResult>>('/storage/upload', formData);
       const url = upload.data?.url;
       if (!url) throw new Error('Fotoğraf yüklenemedi');
@@ -143,170 +134,152 @@ export default function ProfileScreen() {
   const displayLast = editing ? lastName : profile?.lastName ?? '';
   const initials = `${displayName.charAt(0)}${displayLast.charAt(0)}`.trim().toUpperCase() || '?';
   const avatarUrl = editing ? profileImageUrl : profile?.profileImageUrl;
+  const roleLabel = profile ? roleDashboardTitles[(profile.role as UserRole) ?? 'USER'] ?? profile.role : '';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
-      <View style={[styles.header, { backgroundColor: IteoColors.black }]}>
-        <Text style={styles.headerTitle}>Profilim</Text>
-      </View>
-
-      <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        {loading ? (
-          <ActivityIndicator color={IteoColors.yellow} />
-        ) : error && !profile ? (
-          <Text style={styles.error}>{error}</Text>
-        ) : profile ? (
-          <>
-            <Pressable onPress={editing ? pickPhoto : undefined} disabled={!editing || uploading}>
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-              ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{initials}</Text>
-                </View>
-              )}
-            </Pressable>
-            {editing && (
-              <Pressable onPress={pickPhoto} disabled={uploading} style={{ marginTop: 8 }}>
-                <Text style={{ color: IteoColors.yellow, fontWeight: '700', fontSize: 13 }}>
-                  {uploading ? 'Yükleniyor...' : 'Fotoğraf Seç'}
-                </Text>
-              </Pressable>
-            )}
-
-            {editing ? (
-              <View style={styles.editForm}>
-                <TextInput
-                  style={[styles.input, { color: theme.text, borderColor: theme.border }]}
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  placeholder="Ad"
-                  placeholderTextColor={theme.textSecondary}
-                />
-                <TextInput
-                  style={[styles.input, { color: theme.text, borderColor: theme.border }]}
-                  value={lastName}
-                  onChangeText={setLastName}
-                  placeholder="Soyad"
-                  placeholderTextColor={theme.textSecondary}
-                />
-                <TextInput
-                  style={[styles.input, { color: theme.text, borderColor: theme.border }]}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="Telefon (05XX XXX XX XX)"
-                  placeholderTextColor={theme.textSecondary}
-                  keyboardType="phone-pad"
-                />
-                {profile.email && (
-                  <Text style={[styles.readOnlyField, { color: theme.textSecondary }]}>
-                    E-posta: {profile.email}
-                  </Text>
-                )}
-                <View style={styles.editActions}>
-                  <Pressable style={styles.saveBtn} onPress={saveProfile} disabled={saving || uploading}>
-                    <Text style={styles.saveBtnText}>{saving ? 'Kaydediliyor...' : 'Kaydet'}</Text>
-                  </Pressable>
-                  <Pressable onPress={cancelEdit}>
-                    <Text style={{ color: theme.textSecondary, marginTop: 8 }}>İptal</Text>
-                  </Pressable>
-                </View>
-              </View>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.backgroundSecondary }]} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.hero}>
+          <Pressable onPress={editing ? pickPhoto : undefined} disabled={!editing || uploading} style={styles.avatarWrap}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
             ) : (
-              <>
-                <Text style={[styles.name, { color: theme.text }]}>
-                  {profile.firstName} {profile.lastName}
-                </Text>
-                <Text style={[styles.meta, { color: theme.textSecondary }]}>
-                  {profile.phone ?? 'Telefon eklenmemiş'} · {profile.role}
-                </Text>
-                {profile.email && (
-                  <Text style={[styles.meta, { color: theme.textSecondary }]}>{profile.email}</Text>
-                )}
-                <Pressable onPress={() => setEditing(true)} style={{ marginTop: 12 }}>
-                  <Text style={{ color: IteoColors.yellow, fontWeight: '700' }}>Profili Düzenle</Text>
-                </Pressable>
-              </>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
             )}
-
-            {error && profile && <Text style={[styles.error, { marginTop: 12 }]}>{error}</Text>}
-          </>
-        ) : null}
-
-        <View style={styles.menu}>
-          <Link href="/vehicles" asChild>
-            <Pressable style={[styles.menuItem, { borderColor: theme.border }]}>
-              <Text style={{ color: theme.text }}>Plaka / Araçlarım</Text>
-              <Text style={{ color: theme.textSecondary }}>→</Text>
-            </Pressable>
-          </Link>
-          <Link href="/notifications" asChild>
-            <Pressable style={[styles.menuItem, { borderColor: theme.border }]}>
-              <Text style={{ color: theme.text }}>Bildirimler</Text>
-              <Text style={{ color: theme.textSecondary }}>→</Text>
-            </Pressable>
-          </Link>
-          <Link href="/settings" asChild>
-            <Pressable style={[styles.menuItem, { borderColor: theme.border }]}>
-              <Text style={{ color: theme.text }}>Ayarlar</Text>
-              <Text style={{ color: theme.textSecondary }}>→</Text>
-            </Pressable>
-          </Link>
+            {editing ? (
+              <View style={styles.cameraBadge}>
+                <Ionicons name="camera" size={15} color={IteoColors.black} />
+              </View>
+            ) : null}
+          </Pressable>
+          <Text style={styles.heroName}>
+            {profile ? `${profile.firstName} ${profile.lastName}` : 'İTEO Üyesi'}
+          </Text>
+          {roleLabel ? (
+            <View style={styles.roleChip}>
+              <Text style={styles.roleChipText}>{roleLabel}</Text>
+            </View>
+          ) : null}
         </View>
 
-        <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Çıkış Yap</Text>
-        </Pressable>
-      </View>
+        {loading ? (
+          <Loader />
+        ) : (
+          <>
+            <Card>
+              {editing ? (
+                <>
+                  <Field label="Ad" value={firstName} onChangeText={setFirstName} placeholder="Ad" />
+                  <Field label="Soyad" value={lastName} onChangeText={setLastName} placeholder="Soyad" />
+                  <Field
+                    label="Telefon"
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="05XX XXX XX XX"
+                    keyboardType="phone-pad"
+                    icon="call-outline"
+                  />
+                  {profile?.email ? (
+                    <Text style={[styles.readonly, { color: theme.textSecondary }]}>E-posta: {profile.email}</Text>
+                  ) : null}
+                  {uploading ? <Text style={styles.uploading}>Fotoğraf yükleniyor...</Text> : null}
+                  {error ? <ErrorText>{error}</ErrorText> : null}
+                  <View style={styles.actionsRow}>
+                    <Button title="Kaydet" onPress={saveProfile} loading={saving} disabled={uploading} icon="checkmark" style={styles.flex} />
+                    <Button title="İptal" variant="outline" onPress={cancelEdit} style={styles.flex} />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <InfoRow icon="call-outline" label="Telefon" value={profile?.phone ?? 'Eklenmemiş'} theme={theme} />
+                  <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                  <InfoRow icon="mail-outline" label="E-posta" value={profile?.email ?? 'Eklenmemiş'} theme={theme} />
+                  <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                  <InfoRow
+                    icon="shield-checkmark-outline"
+                    label="Durum"
+                    value={profile?.status === 'ACTIVE' ? 'Aktif' : profile?.status ?? '—'}
+                    theme={theme}
+                  />
+                  {error ? <ErrorText>{error}</ErrorText> : null}
+                  <Button title="Profili Düzenle" variant="outline" icon="create-outline" onPress={() => setEditing(true)} style={{ marginTop: spacing.md }} />
+                </>
+              )}
+            </Card>
+
+            <View style={styles.menu}>
+              <ListRow title="Plaka / Araçlarım" icon="car-sport-outline" onPress={() => router.push('/(tabs)/vehicles')} />
+              <ListRow title="Bildirimler" icon="notifications-outline" onPress={() => router.push('/notifications')} />
+              <ListRow title="Ayarlar" icon="settings-outline" onPress={() => router.push('/settings')} />
+              <ListRow title="Yardım & Destek" icon="help-circle-outline" onPress={() => router.push('/help')} />
+            </View>
+
+            <Button title="Çıkış Yap" variant="dark" icon="log-out-outline" onPress={handleLogout} style={{ marginTop: spacing.lg }} />
+          </>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
+function InfoRow({
+  icon,
+  label,
+  value,
+  theme,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  theme: ReturnType<typeof useTheme>;
+}) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={[styles.infoIcon, { backgroundColor: IteoColors.yellowLight }]}>
+        <Ionicons name={icon} size={17} color={IteoColors.black} />
+      </View>
+      <View style={styles.flex}>
+        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{label}</Text>
+        <Text style={[styles.infoValue, { color: theme.text }]}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingVertical: 16 },
-  headerTitle: { color: IteoColors.white, fontSize: 20, fontWeight: '700' },
-  card: { margin: 16, borderRadius: 14, borderWidth: 1, padding: 24, alignItems: 'center' },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+  safe: { flex: 1 },
+  flex: { flex: 1 },
+  content: { padding: spacing.lg, paddingBottom: SCREEN_BOTTOM_INSET, gap: spacing.lg },
+  hero: { backgroundColor: IteoColors.black, borderRadius: radius.xxl, padding: spacing.xl, alignItems: 'center' },
+  avatarWrap: { marginBottom: spacing.md },
+  avatar: { width: 96, height: 96, borderRadius: 48, backgroundColor: IteoColors.yellow, alignItems: 'center', justifyContent: 'center' },
+  avatarImage: { width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: IteoColors.yellow },
+  avatarText: { fontSize: 34, fontWeight: '900', color: IteoColors.black },
+  cameraBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: IteoColors.yellow,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: IteoColors.black,
   },
-  avatarImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 2,
-    borderColor: IteoColors.yellow,
-  },
-  avatarText: { fontSize: 32, fontWeight: '800', color: IteoColors.black },
-  name: { marginTop: 16, fontSize: 20, fontWeight: '700' },
-  meta: { marginTop: 4, fontSize: 14 },
-  editForm: { width: '100%', marginTop: 16, gap: 10 },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, width: '100%' },
-  readOnlyField: { fontSize: 13, paddingHorizontal: 4 },
-  editActions: { alignItems: 'center', marginTop: 8 },
-  saveBtn: { backgroundColor: IteoColors.yellow, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12 },
-  saveBtnText: { color: IteoColors.black, fontWeight: '700' },
-  menu: { width: '100%', marginTop: 20, gap: 8 },
-  menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  error: { color: '#FCA5A5', textAlign: 'center' },
-  logoutBtn: {
-    marginTop: 24,
-    backgroundColor: IteoColors.black,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  logoutText: { color: IteoColors.white, fontWeight: '700' },
+  heroName: { color: IteoColors.white, fontSize: fontSize.xxl, fontWeight: '900', letterSpacing: -0.4 },
+  roleChip: { backgroundColor: 'rgba(255,199,0,0.16)', borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 6, marginTop: spacing.sm },
+  roleChipText: { color: IteoColors.yellow, fontWeight: '800', fontSize: fontSize.sm },
+  readonly: { fontSize: fontSize.sm, marginBottom: spacing.sm, marginLeft: 2 },
+  uploading: { color: IteoColors.yellowDark, fontWeight: '700', fontSize: fontSize.sm, marginBottom: spacing.sm },
+  actionsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  infoIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  infoLabel: { fontSize: fontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  infoValue: { fontSize: fontSize.md, fontWeight: '700', marginTop: 2 },
+  divider: { height: 1, marginVertical: spacing.xs },
+  menu: { gap: spacing.sm },
 });

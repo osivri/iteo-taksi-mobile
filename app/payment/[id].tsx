@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import Colors, { IteoColors } from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
+import { fontSize, spacing } from '@/constants/theme';
 import { api, ApiResponse } from '@/lib/api';
+import { Badge, Button, Card, ErrorText, Loader, useTheme } from '@/components/ui';
 
 interface PaymentDetail {
   id: string;
@@ -24,6 +24,14 @@ const statusLabels: Record<string, string> = {
   REFUNDED: 'İade',
 };
 
+const statusTone: Record<string, 'success' | 'danger' | 'warning' | 'neutral'> = {
+  SUCCESS: 'success',
+  FAILED: 'danger',
+  CANCELLED: 'danger',
+  PENDING: 'warning',
+  REFUNDED: 'neutral',
+};
+
 const typeLabels: Record<string, string> = {
   DUES: 'Aidat',
   APP_FEE: 'Uygulama Ücreti',
@@ -33,8 +41,7 @@ const typeLabels: Record<string, string> = {
 
 export default function PaymentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const theme = useTheme();
   const [item, setItem] = useState<PaymentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,70 +57,43 @@ export default function PaymentDetailScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Ödeme Detayı',
-          headerStyle: { backgroundColor: IteoColors.black },
-          headerTintColor: IteoColors.white,
-        }}
-      />
-      <ScrollView style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
+      <Stack.Screen options={{ headerShown: true, title: 'Ödeme Detayı' }} />
+      <ScrollView style={[styles.container, { backgroundColor: theme.backgroundSecondary }]} contentContainerStyle={styles.content}>
         {loading ? (
-          <ActivityIndicator color={IteoColors.yellow} style={{ marginTop: 32 }} />
+          <Loader />
         ) : error ? (
-          <Text style={styles.error}>{error}</Text>
+          <ErrorText>{error}</ErrorText>
         ) : item ? (
-          <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Text style={[styles.amount, { color: theme.text }]}>
-              {item.amount.toLocaleString('tr-TR')} ₺
-            </Text>
-            <Text style={[styles.status, item.status === 'SUCCESS' ? styles.success : styles.pending]}>
-              {statusLabels[item.status] ?? item.status}
-            </Text>
-            <View style={styles.row}>
-              <Text style={{ color: theme.textSecondary }}>Tür</Text>
-              <Text style={{ color: theme.text, fontWeight: '600' }}>
-                {typeLabels[item.type] ?? item.type}
-              </Text>
+          <Card>
+            <Text style={[styles.amount, { color: theme.text }]}>{item.amount.toLocaleString('tr-TR')} ₺</Text>
+            <View style={{ marginTop: spacing.sm, marginBottom: spacing.lg }}>
+              <Badge label={statusLabels[item.status] ?? item.status} tone={statusTone[item.status] ?? 'neutral'} />
             </View>
-            <View style={styles.row}>
-              <Text style={{ color: theme.textSecondary }}>Oluşturulma</Text>
-              <Text style={{ color: theme.text }}>{new Date(item.createdAt).toLocaleString('tr-TR')}</Text>
-            </View>
-            {item.paidAt && (
-              <View style={styles.row}>
-                <Text style={{ color: theme.textSecondary }}>Ödeme Tarihi</Text>
-                <Text style={{ color: theme.text }}>{new Date(item.paidAt).toLocaleString('tr-TR')}</Text>
-              </View>
-            )}
-            {item.receiptUrl && (
-              <Pressable style={styles.receiptBtn} onPress={() => Linking.openURL(item.receiptUrl!)}>
-                <Text style={styles.receiptText}>Ödeme Dekontunu Görüntüle</Text>
-              </Pressable>
-            )}
-          </View>
+            <Row label="Tür" value={typeLabels[item.type] ?? item.type} theme={theme} />
+            <Row label="Oluşturulma" value={new Date(item.createdAt).toLocaleString('tr-TR')} theme={theme} />
+            {item.paidAt ? <Row label="Ödeme Tarihi" value={new Date(item.paidAt).toLocaleString('tr-TR')} theme={theme} /> : null}
+            {item.receiptUrl ? (
+              <Button title="Dekontu Görüntüle" icon="document-text" onPress={() => Linking.openURL(item.receiptUrl!)} style={{ marginTop: spacing.lg }} />
+            ) : null}
+          </Card>
         ) : null}
       </ScrollView>
     </>
   );
 }
 
+function Row({ label, value, theme }: { label: string; value: string; theme: ReturnType<typeof useTheme> }) {
+  return (
+    <View style={styles.row}>
+      <Text style={{ color: theme.textSecondary }}>{label}</Text>
+      <Text style={{ color: theme.text, fontWeight: '700' }}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  error: { color: '#FCA5A5', textAlign: 'center', margin: 16 },
-  card: { margin: 16, borderWidth: 1, borderRadius: 14, padding: 20 },
-  amount: { fontSize: 36, fontWeight: '800' },
-  status: { fontSize: 14, fontWeight: '700', marginTop: 8, marginBottom: 20 },
-  success: { color: '#16A34A' },
-  pending: { color: IteoColors.yellow },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  receiptBtn: {
-    marginTop: 20,
-    backgroundColor: IteoColors.yellow,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  receiptText: { color: IteoColors.black, fontWeight: '700' },
+  content: { padding: spacing.lg },
+  amount: { fontSize: fontSize.hero, fontWeight: '900', letterSpacing: -1 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.sm },
 });

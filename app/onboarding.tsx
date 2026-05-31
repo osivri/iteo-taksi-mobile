@@ -2,26 +2,27 @@ import { useRef, useState } from 'react';
 import { Dimensions, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { setOnboardingDone } from '@/lib/onboarding';
 
 const { width } = Dimensions.get('window');
 
-const slides = [
+const slides: Array<{ title: string; description: string; icon: keyof typeof Ionicons.glyphMap }> = [
   {
     title: 'İTEO Mobil\'e Hoş Geldiniz',
     description: 'İstanbul Taksiciler Esnaf Odası\'nın dijital hizmet platformu.',
-    emoji: '🚕',
+    icon: 'car-sport',
   },
   {
     title: 'Muhasebe & Ödemeler',
     description: 'Gelir-gider takibi, aidat ödemeleri ve fiş yükleme tek uygulamada.',
-    emoji: '💰',
+    icon: 'wallet',
   },
   {
     title: 'Randevu & İSG',
     description: 'Otel ve oto servis talepleri, İSG eğitimleri ve dijital danışman desteği.',
-    emoji: '🦺',
+    icon: 'shield-checkmark',
   },
 ];
 
@@ -46,7 +47,10 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <Image source={require('@/assets/images/iteo_logo.jpeg')} style={styles.logo} />
+      <View style={styles.topBar}>
+        <Image source={require('@/assets/images/iteo_logo.jpeg')} style={styles.logo} />
+        <Text style={styles.brand}>İTEO Mobil</Text>
+      </View>
       <FlatList
         ref={listRef}
         data={slides}
@@ -57,9 +61,13 @@ export default function OnboardingScreen() {
         onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
         renderItem={({ item }) => (
           <View style={[styles.slide, { width }]}>
-            <Text style={styles.emoji}>{item.emoji}</Text>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.description}>{item.description}</Text>
+            <View style={styles.illustration}>
+              <Ionicons name={item.icon} size={72} color={IteoColors.yellow} />
+            </View>
+            <View style={styles.copyCard}>
+              <Text style={styles.title}>{item.title}</Text>
+              <Text style={styles.description}>{item.description}</Text>
+            </View>
           </View>
         )}
       />
@@ -84,16 +92,34 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: IteoColors.black },
-  logo: { width: 64, height: 64, borderRadius: 14, alignSelf: 'center', marginTop: 24 },
-  slide: { paddingHorizontal: 32, paddingTop: 48, alignItems: 'center' },
-  emoji: { fontSize: 64, marginBottom: 24 },
-  title: { color: IteoColors.white, fontSize: 24, fontWeight: '800', textAlign: 'center' },
-  description: { color: IteoColors.gray500, fontSize: 15, textAlign: 'center', marginTop: 16, lineHeight: 22 },
+  topBar: { paddingTop: 20, alignItems: 'center' },
+  logo: { width: 66, height: 66, borderRadius: 18 },
+  brand: { color: IteoColors.yellow, fontWeight: '800', marginTop: 12, letterSpacing: 1.2 },
+  slide: { paddingHorizontal: 24, paddingTop: 36, alignItems: 'center', justifyContent: 'center' },
+  illustration: {
+    width: 164,
+    height: 164,
+    borderRadius: 48,
+    backgroundColor: '#141414',
+    borderWidth: 1,
+    borderColor: '#262626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 22,
+  },
+  copyCard: {
+    width: '100%',
+    backgroundColor: IteoColors.white,
+    borderRadius: 28,
+    padding: 24,
+  },
+  title: { color: IteoColors.black, fontSize: 26, fontWeight: '900', textAlign: 'center', letterSpacing: -0.4 },
+  description: { color: IteoColors.gray500, fontSize: 15, textAlign: 'center', marginTop: 14, lineHeight: 22 },
   footer: { padding: 24, gap: 16 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#333333' },
   dotActive: { backgroundColor: IteoColors.yellow, width: 24 },
-  button: { backgroundColor: IteoColors.yellow, borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
+  button: { backgroundColor: IteoColors.yellow, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   buttonText: { color: IteoColors.black, fontSize: 16, fontWeight: '700' },
   skip: { color: IteoColors.gray500, textAlign: 'center' },
 });
