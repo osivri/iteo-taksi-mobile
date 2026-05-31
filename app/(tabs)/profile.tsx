@@ -17,6 +17,9 @@ interface Profile {
   phone: string | null;
   email: string | null;
   profileImageUrl: string | null;
+  city: string | null;
+  district: string | null;
+  addressLine: string | null;
   role: string;
   status: string;
 }
@@ -35,6 +38,9 @@ export default function ProfileScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [addressLine, setAddressLine] = useState('');
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -50,6 +56,9 @@ export default function ProfileScreen() {
           setFirstName(p.firstName);
           setLastName(p.lastName);
           setPhone(p.phone ?? '');
+          setCity(p.city ?? '');
+          setDistrict(p.district ?? '');
+          setAddressLine(p.addressLine ?? '');
           setProfileImageUrl(p.profileImageUrl);
         }
         setError(null);
@@ -104,6 +113,9 @@ export default function ProfileScreen() {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone.trim() || undefined,
+        city: city.trim() || undefined,
+        district: district.trim() || undefined,
+        addressLine: addressLine.trim() || undefined,
         profileImageUrl: profileImageUrl ?? undefined,
       });
       setEditing(false);
@@ -120,6 +132,9 @@ export default function ProfileScreen() {
       setFirstName(profile.firstName);
       setLastName(profile.lastName);
       setPhone(profile.phone ?? '');
+      setCity(profile.city ?? '');
+      setDistrict(profile.district ?? '');
+      setAddressLine(profile.addressLine ?? '');
       setProfileImageUrl(profile.profileImageUrl);
     }
     setEditing(false);
@@ -181,6 +196,16 @@ export default function ProfileScreen() {
                     keyboardType="phone-pad"
                     icon="call-outline"
                   />
+                  <Field label="İl" value={city} onChangeText={setCity} placeholder="İstanbul" icon="location-outline" />
+                  <Field label="İlçe" value={district} onChangeText={setDistrict} placeholder="Kadıköy" icon="map-outline" />
+                  <Field
+                    label="Açık adres"
+                    value={addressLine}
+                    onChangeText={setAddressLine}
+                    placeholder="Mahalle, sokak, bina no, daire"
+                    multiline
+                    style={{ minHeight: 88, textAlignVertical: 'top' }}
+                  />
                   {profile?.email ? (
                     <Text style={[styles.readonly, { color: theme.textSecondary }]}>E-posta: {profile.email}</Text>
                   ) : null}
@@ -196,6 +221,17 @@ export default function ProfileScreen() {
                   <InfoRow icon="call-outline" label="Telefon" value={profile?.phone ?? 'Eklenmemiş'} theme={theme} />
                   <View style={[styles.divider, { backgroundColor: theme.border }]} />
                   <InfoRow icon="mail-outline" label="E-posta" value={profile?.email ?? 'Eklenmemiş'} theme={theme} />
+                  <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                  <InfoRow
+                    icon="location-outline"
+                    label="Adres"
+                    value={
+                      profile?.city && profile?.district
+                        ? `${profile.city} / ${profile.district}${profile.addressLine ? `\n${profile.addressLine}` : ''}`
+                        : 'Eklenmemiş'
+                    }
+                    theme={theme}
+                  />
                   <View style={[styles.divider, { backgroundColor: theme.border }]} />
                   <InfoRow
                     icon="shield-checkmark-outline"

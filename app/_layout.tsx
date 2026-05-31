@@ -42,6 +42,7 @@ export default function RootLayout() {
     { name: 'settings', title: 'Ayarlar' },
     { name: 'help', title: 'Yardım & Destek' },
     { name: 'forgotten-items', title: 'Unutulan Eşya' },
+    { name: 'address', title: 'Adres Bilgileri' },
   ];
 
   return (

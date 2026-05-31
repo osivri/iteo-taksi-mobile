@@ -9,7 +9,7 @@ import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useAuth } from '@/hooks/useAuth';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { api, ApiResponse } from '@/lib/api';
-import { isOnboardingDone, needsKvkkAcceptance, needsProfileSetup } from '@/lib/onboarding';
+import { isOnboardingDone, needsAddressSetup, needsKvkkAcceptance, needsProfileSetup } from '@/lib/onboarding';
 import { isTabVisible, RoleTabName, tabLabel, toMemberRole, type MemberRole } from '@/lib/dashboard';
 
 interface Profile {
@@ -18,6 +18,9 @@ interface Profile {
   status: string;
   role: string;
   kvkkAcceptedAt: string | null;
+  city: string | null;
+  district: string | null;
+  addressLine: string | null;
 }
 
 const tabIcons: Record<RoleTabName, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
@@ -36,6 +39,7 @@ export default function TabLayout() {
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const [profileOk, setProfileOk] = useState<boolean | null>(null);
   const [kvkkOk, setKvkkOk] = useState<boolean | null>(null);
+  const [addressOk, setAddressOk] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [role, setRole] = useState<MemberRole>('USER');
 
@@ -69,9 +73,11 @@ export default function TabLayout() {
         setRole(toMemberRole(profile.role));
         setProfileOk(!needsProfileSetup(profile));
         setKvkkOk(!needsKvkkAcceptance(profile));
+        setAddressOk(!needsAddressSetup(profile));
       } catch {
         setProfileOk(false);
         setKvkkOk(false);
+        setAddressOk(false);
       } finally {
         setGateLoading(false);
       }
@@ -106,6 +112,10 @@ export default function TabLayout() {
 
   if (kvkkOk === false) {
     return <Redirect href="/kvkk" />;
+  }
+
+  if (addressOk === false) {
+    return <Redirect href="/address" />;
   }
 
   const roleTab = (name: RoleTabName) => ({
