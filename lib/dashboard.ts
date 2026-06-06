@@ -94,6 +94,7 @@ export const allQuickActions: QuickAction[] = [
   { title: 'Ödemeler', subtitle: 'Aidat ve ücretler', href: '/(tabs)/payments', emoji: '💳', roles: ['USER', 'PLATE_OWNER'] },
   { title: 'Randevu', subtitle: 'Otel & oto servis', href: '/(tabs)/appointments', emoji: '📅', roles: ['USER', 'DRIVER', 'PLATE_OWNER'] },
   { title: 'Unutulan Eşya', subtitle: 'Odaya eşya bildirimi', href: '/forgotten-items', emoji: '🧳', roles: ['DRIVER', 'PLATE_OWNER'] },
+  { title: 'Oda Hizmetleri', subtitle: 'Çekici, sigorta, şikayet', href: '/services', emoji: '🛎️', roles: ['USER', 'DRIVER', 'PLATE_OWNER'] },
   { title: 'İSG', subtitle: 'Eğitim ve dijital danışman', href: '/ohs', emoji: '🦺', roles: ['USER', 'DRIVER', 'PLATE_OWNER'] },
   { title: 'Bildirimler', subtitle: 'Mesajlarınız', href: '/notifications', emoji: '🔔', roles: ['USER', 'DRIVER', 'PLATE_OWNER'] },
   { title: 'Yardım', subtitle: 'SSS ve iletişim', href: '/help', emoji: '❓', roles: ['USER', 'DRIVER', 'PLATE_OWNER'] },
