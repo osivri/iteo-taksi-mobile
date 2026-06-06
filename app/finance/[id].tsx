@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, spacing } from '@/constants/theme';
 import { api, ApiResponse } from '@/lib/api';
+import { openSafeUrl } from '@/lib/safe-url';
 import { Badge, Card, ErrorText, Loader, useTheme } from '@/components/ui';
 
 interface FinanceRecord {
@@ -79,7 +80,12 @@ export default function FinanceDetailScreen() {
                   </View>
                 ) : null}
                 <Image source={{ uri: item.receiptImageUrl }} style={styles.receipt} resizeMode="contain" />
-                <Pressable onPress={() => Linking.openURL(item.receiptImageUrl!)} hitSlop={8}>
+                <Pressable
+                  onPress={async () => {
+                    const opened = await openSafeUrl(item.receiptImageUrl!);
+                    if (!opened) Alert.alert('Bağlantı engellendi', 'Bu görsel bağlantısı güvenli değil.');
+                  }}
+                  hitSlop={8}>
                   <Text style={styles.link}>Görseli tarayıcıda aç</Text>
                 </Pressable>
               </>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { fontSize, spacing } from '@/constants/theme';
 import { api, ApiResponse } from '@/lib/api';
+import { openSafeUrl } from '@/lib/safe-url';
 import { Badge, Button, Card, ErrorText, Loader, useTheme } from '@/components/ui';
 
 interface PaymentDetail {
@@ -73,7 +74,15 @@ export default function PaymentDetailScreen() {
             <Row label="Oluşturulma" value={new Date(item.createdAt).toLocaleString('tr-TR')} theme={theme} />
             {item.paidAt ? <Row label="Ödeme Tarihi" value={new Date(item.paidAt).toLocaleString('tr-TR')} theme={theme} /> : null}
             {item.receiptUrl ? (
-              <Button title="Dekontu Görüntüle" icon="document-text" onPress={() => Linking.openURL(item.receiptUrl!)} style={{ marginTop: spacing.lg }} />
+              <Button
+                title="Dekontu Görüntüle"
+                icon="document-text"
+                onPress={async () => {
+                  const opened = await openSafeUrl(item.receiptUrl!);
+                  if (!opened) Alert.alert('Bağlantı engellendi', 'Bu dekont bağlantısı güvenli değil.');
+                }}
+                style={{ marginTop: spacing.lg }}
+              />
             ) : null}
           </Card>
         ) : null}

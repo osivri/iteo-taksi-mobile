@@ -88,13 +88,12 @@ export default function ProfileScreen() {
     setError(null);
     try {
       const formData = new FormData();
-      formData.append('bucket', 'profile-images');
       formData.append('file', {
         uri: asset.uri,
         name: 'profile.jpg',
         type: asset.mimeType ?? 'image/jpeg',
       } as unknown as Blob);
-      const upload = await api.upload<ApiResponse<UploadResult>>('/storage/upload', formData);
+      const upload = await api.upload<ApiResponse<UploadResult>>('/storage/profile-images', formData);
       const url = upload.data?.url;
       if (!url) throw new Error('Fotoğraf yüklenemedi');
       setProfileImageUrl(url);

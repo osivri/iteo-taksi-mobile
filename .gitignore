@@ -24,8 +24,8 @@ expo-env.d.ts
 # Environment (never commit secrets or env templates)
 .env
 .env.*
+!.env.example
 .env.local
-.env.example
 .env.development
 .env.production
 

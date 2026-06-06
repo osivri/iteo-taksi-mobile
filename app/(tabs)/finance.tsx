@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, shadow, spacing } from '@/constants/theme';
+import { useProfile } from '@/hooks/useProfile';
 import { api, ApiResponse } from '@/lib/api';
 import { FinanceBarChart, FinanceLineChart, PeriodTabs } from '@/components/FinanceUi';
 import { FinancePeriod, getPeriodRange } from '@/lib/date-ranges';
@@ -53,7 +54,8 @@ interface UploadResult {
 
 export default function FinanceScreen() {
   const theme = useTheme();
-  const [role, setRole] = useState<string | null>(null);
+  const profileQuery = useProfile<UserProfile>();
+  const role = profileQuery.data?.role ?? null;
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleId, setVehicleId] = useState('');
   const [records, setRecords] = useState<FinanceRecord[]>([]);
@@ -75,13 +77,6 @@ export default function FinanceScreen() {
   const canEnterData = !requiresPlate || Boolean(vehicleId);
 
   const plateById = useMemo(() => Object.fromEntries(vehicles.map((v) => [v.id, v.plateNumber])), [vehicles]);
-
-  useEffect(() => {
-    api
-      .get<ApiResponse<UserProfile>>('/users/me')
-      .then((res) => setRole(res.data?.role ?? null))
-      .catch(() => setRole(null));
-  }, []);
 
   useEffect(() => {
     if (!requiresPlate) return;
@@ -179,10 +174,9 @@ export default function FinanceScreen() {
     setSaving(true);
     try {
       const formData = new FormData();
-      formData.append('bucket', 'receipts');
       formData.append('file', { uri: asset.uri, name: 'receipt.jpg', type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob);
 
-      const upload = await api.upload<ApiResponse<UploadResult>>('/storage/upload', formData);
+      const upload = await api.upload<ApiResponse<UploadResult>>('/storage/receipts', formData);
       const url = upload.data?.url;
       if (!url) throw new Error('Dosya yüklenemedi');
 
@@ -238,9 +232,8 @@ export default function FinanceScreen() {
     setSaving(true);
     try {
       const formData = new FormData();
-      formData.append('bucket', 'receipts');
       formData.append('file', { uri: asset.uri, name: 'receipt.jpg', type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob);
-      const upload = await api.upload<ApiResponse<UploadResult>>('/storage/upload', formData);
+      const upload = await api.upload<ApiResponse<UploadResult>>('/storage/receipts', formData);
       const url = upload.data?.url;
       if (!url) throw new Error('Dosya yüklenemedi');
       await api.post(`/finance/records/${recordId}/receipt`, { receiptImageUrl: url, runOcr: true });

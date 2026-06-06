@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { fontSize, spacing } from '@/constants/theme';
 import { api, ApiResponse } from '@/lib/api';
+import { openSafeUrl } from '@/lib/safe-url';
 import { Badge, Button, Card, ErrorText, Loader, useTheme } from '@/components/ui';
 
 interface OhsDetail {
@@ -50,7 +51,15 @@ export default function OhsDetailScreen() {
               <Text style={{ color: theme.textSecondary, marginTop: spacing.lg, lineHeight: 24 }}>{item.body}</Text>
             ) : null}
             {item.videoUrl ? (
-              <Button title="Videoyu Aç" icon="play-circle" onPress={() => Linking.openURL(item.videoUrl!)} style={{ marginTop: spacing.lg }} />
+              <Button
+                title="Videoyu Aç"
+                icon="play-circle"
+                onPress={async () => {
+                  const opened = await openSafeUrl(item.videoUrl!);
+                  if (!opened) Alert.alert('Bağlantı engellendi', 'Bu video bağlantısı güvenli değil.');
+                }}
+                style={{ marginTop: spacing.lg }}
+              />
             ) : null}
           </Card>
         ) : null}

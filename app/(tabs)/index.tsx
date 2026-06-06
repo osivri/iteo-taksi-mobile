@@ -1,7 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { Image, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import Colors, { IteoColors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -42,13 +41,6 @@ export default function HomeScreen() {
       api.get<ApiResponse<FinanceSummary>>(`/finance/summary${summaryQueryString}`).then((r) => r.data!),
     enabled: profileQuery.data?.role === 'DRIVER' || profileQuery.data?.role === 'PLATE_OWNER',
   });
-
-  useFocusEffect(
-    useCallback(() => {
-      profileQuery.refetch();
-      summaryQuery.refetch();
-    }, [profileQuery, summaryQuery]),
-  );
 
   async function onRefresh() {
     setRefreshing(true);

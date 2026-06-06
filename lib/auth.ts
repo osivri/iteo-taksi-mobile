@@ -6,7 +6,13 @@ const KEYS = {
   access: 'iteo_access_token',
   refresh: 'iteo_refresh_token',
   role: 'iteo_user_role',
+  expiresAt: 'iteo_token_expires_at',
 } as const;
+
+const REFRESH_BUFFER_MS = 60_000;
+
+let memoryAccessToken: string | null = null;
+let memoryExpiresAt: number | null = null;
 
 export interface AuthSessionPayload {
   accessToken: string;
@@ -43,13 +49,30 @@ async function removeItem(key: string) {
 export async function setSession(session: AuthSessionPayload) {
   await setItem(KEYS.access, session.accessToken);
   await setItem(KEYS.refresh, session.refreshToken);
+  memoryAccessToken = session.accessToken;
+
+  if (session.expiresAt) {
+    memoryExpiresAt = session.expiresAt;
+    await setItem(KEYS.expiresAt, String(session.expiresAt));
+  } else {
+    memoryExpiresAt = null;
+    await removeItem(KEYS.expiresAt);
+  }
+
   if (session.user?.role) {
     await setItem(KEYS.role, session.user.role);
   }
 }
 
 export async function clearSession() {
-  await Promise.all([removeItem(KEYS.access), removeItem(KEYS.refresh), removeItem(KEYS.role)]);
+  memoryAccessToken = null;
+  memoryExpiresAt = null;
+  await Promise.all([
+    removeItem(KEYS.access),
+    removeItem(KEYS.refresh),
+    removeItem(KEYS.role),
+    removeItem(KEYS.expiresAt),
+  ]);
 }
 
 export async function getAccessToken(): Promise<string | null> {
@@ -105,9 +128,29 @@ export async function refreshAccessToken(): Promise<string | null> {
   return json.data.accessToken;
 }
 
+async function loadTokenFromStorage(): Promise<{ token: string | null; expiresAt: number | null }> {
+  const [token, expiresRaw] = await Promise.all([getAccessToken(), getItem(KEYS.expiresAt)]);
+  const expiresAt = expiresRaw ? Number(expiresRaw) : null;
+  return { token, expiresAt: Number.isFinite(expiresAt) ? expiresAt : null };
+}
+
+function tokenStillValid(token: string, expiresAt: number | null): boolean {
+  if (!expiresAt) return true;
+  return Date.now() < expiresAt - REFRESH_BUFFER_MS;
+}
+
 export async function resolveAccessToken(): Promise<string | null> {
-  const existing = await getAccessToken();
-  if (existing) return existing;
+  if (memoryAccessToken && tokenStillValid(memoryAccessToken, memoryExpiresAt)) {
+    return memoryAccessToken;
+  }
+
+  const { token, expiresAt } = await loadTokenFromStorage();
+  if (token && tokenStillValid(token, expiresAt)) {
+    memoryAccessToken = token;
+    memoryExpiresAt = expiresAt;
+    return token;
+  }
+
   return refreshAccessToken();
 }
 

@@ -1,13 +1,12 @@
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useProfile } from '@/hooks/useProfile';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, shadow, spacing } from '@/constants/theme';
 import { ScreenHeader, Screen, useTheme } from '@/components/ui';
 import { getQuickActionsForRole, quickActionLabel, roleDashboardTitles, toMemberRole, type UserRole } from '@/lib/dashboard';
-import { api, ApiResponse } from '@/lib/api';
 
 interface Profile {
   role: UserRole;
@@ -30,10 +29,7 @@ const menuIconByTitle: Record<string, keyof typeof Ionicons.glyphMap> = {
 export default function MenuScreen() {
   const theme = useTheme();
 
-  const profileQuery = useQuery({
-    queryKey: ['profile'],
-    queryFn: () => api.get<ApiResponse<Profile>>('/users/me').then((r) => r.data!),
-  });
+  const profileQuery = useProfile<Profile>();
 
   const role = toMemberRole(profileQuery.data?.role);
   const actions = getQuickActionsForRole(role);

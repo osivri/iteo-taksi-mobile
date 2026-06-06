@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { getAccessToken, logoutSession } from '@/lib/auth';
+import { logoutSession, resolveAccessToken } from '@/lib/auth';
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAccessToken().then((token) => {
+    resolveAccessToken().then((token) => {
       setIsAuthenticated(!!token);
       setLoading(false);
     });

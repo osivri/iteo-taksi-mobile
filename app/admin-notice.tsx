@@ -1,9 +1,10 @@
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { getAdminWebUrl } from '@/lib/config';
+import { openSafeUrl } from '@/lib/safe-url';
 import { logoutSession } from '@/lib/auth';
 
 export default function AdminNoticeScreen() {
@@ -25,7 +26,12 @@ export default function AdminNoticeScreen() {
           <Text style={styles.text}>
             Yönetici hesapları mobil uygulama yerine oda yönetimi sayfasından kullanılmalıdır.
           </Text>
-          <Pressable style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]} onPress={() => Linking.openURL(adminUrl)}>
+          <Pressable
+            style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+            onPress={async () => {
+              const opened = await openSafeUrl(adminUrl);
+              if (!opened) Alert.alert('Bağlantı engellendi', 'Yönetim sayfası bağlantısı güvenli değil.');
+            }}>
             <Text style={styles.primaryText}>Yönetim Sayfasına Git</Text>
           </Pressable>
           <Pressable style={styles.secondaryBtn} onPress={signOut}>

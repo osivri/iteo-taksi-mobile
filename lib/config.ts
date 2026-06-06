@@ -41,33 +41,46 @@ export function resolveDevLanHost(): string | null {
   return null;
 }
 
-export function getApiBaseUrl(): string {
-  const configured = process.env.EXPO_PUBLIC_API_URL?.trim();
-
-  // Açıkça tanımlı HTTPS / Railway / production URL
-  if (configured && !isLoopbackUrl(configured)) {
-    return normalizeBaseUrl(configured);
+function resolveLocalDevApiUrl(): string | null {
+  const lanHost = resolveDevLanHost();
+  if (lanHost) {
+    return `http://${lanHost}:${DEFAULT_API_PORT}${API_PATH}`;
   }
 
-  // Sadece EXPO_PUBLIC_USE_LOCAL_API=true ise yerel PC API (LAN + firewall gerekir)
-  if (__DEV__ && process.env.EXPO_PUBLIC_USE_LOCAL_API === 'true') {
-    const lanHost = resolveDevLanHost();
-    if (lanHost) {
-      return `http://${lanHost}:${DEFAULT_API_PORT}${API_PATH}`;
-    }
-  }
-
-  if (Platform.OS === 'android' && __DEV__ && process.env.EXPO_PUBLIC_USE_LOCAL_API === 'true') {
+  if (Platform.OS === 'android') {
     return `http://10.0.2.2:${DEFAULT_API_PORT}${API_PATH}`;
   }
 
-  // Tunnel / fiziksel cihaz varsayılanı: uzak API (firewall yok)
+  return `http://localhost:${DEFAULT_API_PORT}${API_PATH}`;
+}
+
+export function getApiBaseUrl(): string {
+  const configured = process.env.EXPO_PUBLIC_API_URL?.trim();
+  const useRemoteInDev = process.env.EXPO_PUBLIC_USE_REMOTE_API === 'true';
+
   if (__DEV__) {
+    if (configured && !isLoopbackUrl(configured)) {
+      return normalizeBaseUrl(configured);
+    }
+
+    if (!useRemoteInDev) {
+      const localUrl = resolveLocalDevApiUrl();
+      if (localUrl) return localUrl;
+    }
+
+    if (configured) {
+      return normalizeBaseUrl(configured);
+    }
+
     return DEFAULT_REMOTE_API;
   }
 
   if (configured) {
-    return normalizeBaseUrl(configured);
+    const normalized = normalizeBaseUrl(configured);
+    if (normalized.startsWith('http://')) {
+      throw new Error('Production build requires HTTPS API URL.');
+    }
+    return normalized;
   }
 
   return DEFAULT_REMOTE_API;
@@ -87,7 +100,15 @@ export function getAdminWebUrl(): string {
     }
   }
 
-  return configured ? normalizeBaseUrl(configured) : 'http://localhost:3002/login';
+  if (__DEV__) {
+    return configured ? normalizeBaseUrl(configured) : 'http://localhost:3002/login';
+  }
+
+  if (!configured) {
+    throw new Error('EXPO_PUBLIC_ADMIN_URL is required for production builds.');
+  }
+
+  return normalizeBaseUrl(configured);
 }
 
 export function getDevConnectionInfo(): {

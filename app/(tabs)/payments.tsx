@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import { Link, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
@@ -69,14 +70,13 @@ export default function PaymentsScreen() {
         amount: 150,
       });
       const payment = res.data?.payment;
-      if (!payment) throw new Error('Ödeme oluşturulamadı');
+      const checkoutUrl = res.data?.checkoutUrl;
+      if (!payment || !checkoutUrl) throw new Error('Ödeme oluşturulamadı');
 
-      await api.post('/payments/webhook', { paymentId: payment.id, status: 'SUCCESS', webhookSecret: 'dev-webhook-secret' });
-
-      router.push({ pathname: '/payment/result', params: { status: 'SUCCESS', amount: String(payment.amount), id: payment.id } });
+      await WebBrowser.openBrowserAsync(checkoutUrl);
+      router.push({ pathname: '/payment/result', params: { id: payment.id } });
     } catch (e) {
       setError((e as Error).message);
-      router.push({ pathname: '/payment/result', params: { status: 'FAILED' } });
     } finally {
       setPaying(false);
     }
@@ -85,7 +85,7 @@ export default function PaymentsScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.backgroundSecondary }]} edges={['top']}>
       <FlatList
-        data={loading ? [] : items}
+        data={items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -104,7 +104,9 @@ export default function PaymentsScreen() {
             <SectionTitle>Ödeme Geçmişi</SectionTitle>
           </View>
         }
-        ListEmptyComponent={loading ? <Loader /> : <EmptyState icon="card-outline" title="Ödeme yok" message="Henüz bir ödeme kaydınız bulunmuyor." />}
+        ListEmptyComponent={
+          loading ? <Loader /> : <EmptyState icon="card-outline" title="Ödeme yok" message="Henüz bir ödeme kaydınız bulunmuyor." />
+        }
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         renderItem={({ item }) => (
           <Link href={`/payment/${item.id}`} asChild>

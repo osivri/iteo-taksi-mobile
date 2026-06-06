@@ -103,14 +103,13 @@ export default function ForgottenItemsScreen() {
 
     try {
       const formData = new FormData();
-      formData.append('bucket', 'forgotten-items');
       formData.append('file', {
         uri: asset.uri,
         name: 'forgotten-item.jpg',
         type: asset.mimeType ?? 'image/jpeg',
       } as unknown as Blob);
 
-      const upload = await api.upload<ApiResponse<UploadResult>>('/storage/upload', formData);
+      const upload = await api.upload<ApiResponse<UploadResult>>('/storage/forgotten-items', formData);
       const path = upload.data?.path;
       if (!path) throw new Error('Fotoğraf yüklenemedi');
       setPhotoPath(path);

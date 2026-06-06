@@ -1,10 +1,11 @@
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, shadow, spacing } from '@/constants/theme';
 import { getAdminWebUrl } from '@/lib/config';
+import { openSafeUrl } from '@/lib/safe-url';
 import { setLoginIntent, type MemberLoginRole } from '@/lib/login-intent';
 
 const portals: Array<{
@@ -53,7 +54,12 @@ export default function WelcomeScreen() {
           ))}
         </View>
 
-        <Pressable style={styles.adminLink} onPress={() => Linking.openURL(getAdminWebUrl())}>
+        <Pressable
+          style={styles.adminLink}
+          onPress={async () => {
+            const opened = await openSafeUrl(getAdminWebUrl());
+            if (!opened) Alert.alert('Bağlantı engellendi', 'Yönetim sayfası bağlantısı güvenli değil.');
+          }}>
           <Ionicons name="business-outline" size={16} color={IteoColors.yellow} />
           <Text style={styles.adminLinkText}>Oda yönetimi girişi</Text>
         </Pressable>
