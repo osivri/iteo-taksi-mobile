@@ -1,9 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, shadow, spacing } from '@/constants/theme';
+import { useNewsList } from '@/hooks/queries/lists';
 import { api, ApiResponse } from '@/lib/api';
 import { Badge, EmptyState, ErrorText, Loader, useTheme } from '@/components/ui';
 
@@ -21,26 +21,12 @@ interface NewsDetail extends NewsItem {
 
 export default function NewsScreen() {
   const theme = useTheme();
-  const [items, setItems] = useState<NewsItem[]>([]);
+  const newsQuery = useNewsList();
+  const items = newsQuery.data ?? [];
+  const loading = newsQuery.isLoading && items.length === 0;
   const [selected, setSelected] = useState<NewsDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      setSelected(null);
-      api
-        .get<ApiResponse<NewsItem> & { items: NewsItem[] }>('/news')
-        .then((res) => {
-          setItems(res.items ?? []);
-          setError(null);
-        })
-        .catch((e) => setError((e as Error).message))
-        .finally(() => setLoading(false));
-    }, []),
-  );
 
   async function openDetail(id: string) {
     setDetailLoading(true);
@@ -81,7 +67,7 @@ export default function NewsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {error || newsQuery.error ? <ErrorText>{error ?? newsQuery.error?.message}</ErrorText> : null}
       <FlatList
         data={loading || detailLoading ? [] : items}
         keyExtractor={(item) => item.id}

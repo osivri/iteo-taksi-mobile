@@ -13,6 +13,7 @@ const { spawn } = require('child_process');
 
 const DEFAULT_API_PORT = 3001;
 const API_PATH = '/api/v1';
+const RAILWAY_API = 'https://iteo-taksi-backend-production.up.railway.app/api/v1';
 const METRO_PORT = process.env.EXPO_METRO_PORT || '8082';
 
 const VIRTUAL_HINTS = [
@@ -48,18 +49,21 @@ function resolveLocalApiUrl(lan) {
 }
 
 const useTunnel = process.argv.includes('--tunnel');
-const extraArgs = process.argv.slice(2).filter((a) => a !== '--tunnel' && !a.startsWith('--port'));
+const extraArgs = process.argv.slice(2).filter((a) => a !== '--tunnel' && a !== '--remote' && !a.startsWith('--port'));
 
 const env = { ...process.env };
 const hasExplicitApi =
   env.EXPO_PUBLIC_API_URL?.trim() &&
   !/localhost|127\.0\.0\.1/i.test(env.EXPO_PUBLIC_API_URL);
-const useRemoteApi = env.EXPO_PUBLIC_USE_REMOTE_API === 'true';
+const useRemoteApi = process.argv.includes('--remote') || env.EXPO_PUBLIC_USE_REMOTE_API === 'true';
 
 const lan = detectLanHost();
 const portArgs = ['--port', METRO_PORT];
 
-if (!hasExplicitApi && !useRemoteApi) {
+if (!hasExplicitApi && useRemoteApi) {
+  env.EXPO_PUBLIC_API_URL = RAILWAY_API;
+  env.EXPO_PUBLIC_USE_REMOTE_API = 'true';
+} else if (!hasExplicitApi) {
   env.EXPO_PUBLIC_API_URL = resolveLocalApiUrl(lan);
 }
 

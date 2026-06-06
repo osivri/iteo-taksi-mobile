@@ -1,9 +1,11 @@
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { api, ApiResponse } from '@/lib/api';
+import { useServiceRequestsList } from '@/hooks/queries/lists';
+import { queryKeys } from '@/hooks/queries/keys';
+import { api } from '@/lib/api';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, spacing } from '@/constants/theme';
 import { Button, Card, ErrorText, Field, Loader, ScreenHeader, useTheme } from '@/components/ui';
@@ -39,34 +41,18 @@ const statusLabels: Record<string, string> = {
 
 export default function ServicesScreen() {
   const theme = useTheme();
+  const queryClient = useQueryClient();
+  const requestsQuery = useServiceRequestsList();
+  const items = (requestsQuery.data ?? []) as ServiceRequest[];
+  const loading = requestsQuery.isLoading && items.length === 0;
   const [activeType, setActiveType] = useState<ServiceType>('TOW');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [plateNumber, setPlateNumber] = useState('');
   const [locationAddress, setLocationAddress] = useState('');
-  const [items, setItems] = useState<ServiceRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'new' | 'list'>('new');
-
-  const load = useCallback(async () => {
-    try {
-      const res = await api.get<ApiResponse<ServiceRequest> & { items: ServiceRequest[] }>('/service-requests');
-      setItems(res.items ?? []);
-      setError(null);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
 
   async function submit() {
     if (!title.trim()) {
@@ -88,7 +74,7 @@ export default function ServicesScreen() {
       setPlateNumber('');
       setLocationAddress('');
       setTab('list');
-      await load();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.serviceRequests });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -108,8 +94,8 @@ export default function ServicesScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {tab === 'new' ? (
+      {tab === 'new' ? (
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Card>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeRow}>
               {TYPES.map((t) => (
@@ -138,39 +124,39 @@ export default function ServicesScreen() {
               multiline
               style={{ minHeight: 88, textAlignVertical: 'top' }}
             />
-            {error ? <ErrorText>{error}</ErrorText> : null}
+            {error || requestsQuery.error ? <ErrorText>{error ?? requestsQuery.error?.message}</ErrorText> : null}
             <Button title="Talep Gönder" onPress={submit} loading={saving} icon="send" />
           </Card>
-        ) : loading ? (
-          <Loader />
-        ) : (
-          <>
-            {error ? <ErrorText>{error}</ErrorText> : null}
-            {items.length === 0 ? (
-              <Text style={[styles.empty, { color: theme.textSecondary }]}>Henüz talebiniz yok.</Text>
-            ) : (
-              items.map((item) => (
-                <Card key={item.id}>
-                  <View style={styles.row}>
-                    <Text style={[styles.itemTitle, { color: theme.text }]}>{item.title}</Text>
-                    <Text style={styles.badge}>{statusLabels[item.status] ?? item.status}</Text>
-                  </View>
-                  <Text style={[styles.meta, { color: theme.textSecondary }]}>
-                    {TYPES.find((t) => t.key === item.type)?.label ?? item.type}
-                    {item.plateNumber ? ` · ${item.plateNumber}` : ''}
-                  </Text>
-                  {item.description ? (
-                    <Text style={[styles.desc, { color: theme.text }]}>{item.description}</Text>
-                  ) : null}
-                  <Text style={[styles.date, { color: theme.textSecondary }]}>
-                    {new Date(item.createdAt).toLocaleString('tr-TR')}
-                  </Text>
-                </Card>
-              ))
-            )}
-          </>
-        )}
-      </ScrollView>
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={error || requestsQuery.error ? <ErrorText>{error ?? requestsQuery.error?.message}</ErrorText> : null}
+          ListEmptyComponent={
+            loading ? <Loader /> : <Text style={[styles.empty, { color: theme.textSecondary }]}>Henüz talebiniz yok.</Text>
+          }
+          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+          renderItem={({ item }) => (
+            <Card>
+              <View style={styles.row}>
+                <Text style={[styles.itemTitle, { color: theme.text }]}>{item.title}</Text>
+                <Text style={styles.badge}>{statusLabels[item.status] ?? item.status}</Text>
+              </View>
+              <Text style={[styles.meta, { color: theme.textSecondary }]}>
+                {TYPES.find((t) => t.key === item.type)?.label ?? item.type}
+                {item.plateNumber ? ` · ${item.plateNumber}` : ''}
+              </Text>
+              {item.description ? <Text style={[styles.desc, { color: theme.text }]}>{item.description}</Text> : null}
+              <Text style={[styles.date, { color: theme.textSecondary }]}>
+                {new Date(item.createdAt).toLocaleString('tr-TR')}
+              </Text>
+            </Card>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }

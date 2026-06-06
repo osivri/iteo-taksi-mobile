@@ -1,41 +1,23 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, useFocusEffect } from 'expo-router';
-import { IteoColors } from '@/constants/Colors';
+import { Link } from 'expo-router';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, shadow, spacing } from '@/constants/theme';
-import { api, ApiResponse } from '@/lib/api';
+import { useAnnouncementsList } from '@/hooks/queries/lists';
 import { Badge, Chip, EmptyState, ErrorText, Loader, ScreenHeader, useTheme } from '@/components/ui';
 
-interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  category: string;
-  priority: string;
-  publishedAt: string | null;
+function excerpt(text: string, max = 140) {
+  const trimmed = text.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max).trim()}…`;
 }
 
 export default function AnnouncementsScreen() {
   const theme = useTheme();
-  const [allItems, setAllItems] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const announcementsQuery = useAnnouncementsList();
+  const allItems = announcementsQuery.data ?? [];
+  const loading = announcementsQuery.isLoading && allItems.length === 0;
   const [category, setCategory] = useState<string>('Tümü');
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      api
-        .get<ApiResponse<Announcement> & { items: Announcement[] }>('/announcements?limit=50')
-        .then((res) => {
-          setAllItems(res.items ?? []);
-          setError(null);
-        })
-        .catch((e) => setError((e as Error).message))
-        .finally(() => setLoading(false));
-    }, []),
-  );
 
   const categories = useMemo(() => {
     const set = new Set(allItems.map((i) => i.category));
@@ -62,7 +44,7 @@ export default function AnnouncementsScreen() {
                 <Chip key={cat} label={cat} active={category === cat} onPress={() => setCategory(cat)} />
               ))}
             </ScrollView>
-            {error ? <ErrorText>{error}</ErrorText> : null}
+            {announcementsQuery.error ? <ErrorText>{announcementsQuery.error.message}</ErrorText> : null}
           </View>
         }
         ListEmptyComponent={
@@ -83,7 +65,7 @@ export default function AnnouncementsScreen() {
               </View>
               <Text style={[styles.title, { color: theme.text }]}>{item.title}</Text>
               <Text style={[styles.preview, { color: theme.textSecondary }]} numberOfLines={3}>
-                {item.content}
+                {excerpt(item.content)}
               </Text>
               {item.publishedAt ? (
                 <Text style={[styles.date, { color: theme.textSecondary }]}>

@@ -1,55 +1,37 @@
-import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, shadow, spacing } from '@/constants/theme';
-import { api, ApiResponse } from '@/lib/api';
+import { useNotificationsList } from '@/hooks/queries/lists';
+import { queryKeys } from '@/hooks/queries/keys';
+import { api } from '@/lib/api';
 import { EmptyState, ErrorText, Loader, useTheme } from '@/components/ui';
-
-interface NotificationItem {
-  id: string;
-  title: string;
-  body: string;
-  type: string;
-  isRead: boolean;
-  createdAt: string;
-}
 
 export default function NotificationsScreen() {
   const theme = useTheme();
-  const [items, setItems] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const res = await api.get<ApiResponse<NotificationItem> & { items: NotificationItem[] }>('/notifications?limit=50');
-    setItems(res.items ?? []);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      load()
-        .catch((e) => setError((e as Error).message))
-        .finally(() => setLoading(false));
-    }, [load]),
-  );
+  const queryClient = useQueryClient();
+  const notificationsQuery = useNotificationsList();
+  const items = notificationsQuery.data ?? [];
+  const loading = notificationsQuery.isLoading && items.length === 0;
 
   async function markRead(id: string) {
+    queryClient.setQueryData(queryKeys.notifications, (current: typeof items | undefined) =>
+      current?.map((item) => (item.id === id ? { ...item, isRead: true } : item)),
+    );
     try {
       await api.patch(`/notifications/${id}/read`, {});
-      await load();
     } catch (e) {
-      setError((e as Error).message);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+      throw e;
     }
   }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {notificationsQuery.error ? <ErrorText>{notificationsQuery.error.message}</ErrorText> : null}
       <FlatList
-        data={loading ? [] : items}
+        data={items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -64,8 +46,7 @@ export default function NotificationsScreen() {
               theme.scheme === 'light' ? shadow.card : null,
               pressed ? styles.pressed : null,
             ]}>
-            <View
-              style={[styles.icon, { backgroundColor: item.isRead ? theme.backgroundSecondary : IteoColors.yellowLight }]}>
+            <View style={[styles.icon, { backgroundColor: item.isRead ? theme.backgroundSecondary : IteoColors.yellowLight }]}>
               <Ionicons name={item.isRead ? 'notifications-outline' : 'notifications'} size={18} color={IteoColors.black} />
             </View>
             <View style={styles.flex}>

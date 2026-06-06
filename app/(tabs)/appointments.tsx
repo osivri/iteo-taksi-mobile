@@ -1,10 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, shadow, spacing } from '@/constants/theme';
-import { api, ApiResponse } from '@/lib/api';
+import { useAppointmentsList } from '@/hooks/queries/lists';
+import { queryKeys } from '@/hooks/queries/keys';
+import { api } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, ErrorText, Field, Loader, ScreenHeader, SegmentedControl, useTheme } from '@/components/ui';
 
 interface Appointment {
@@ -39,28 +41,16 @@ const statusTone: Record<string, 'success' | 'danger' | 'warning' | 'neutral'> =
 
 export default function AppointmentsScreen() {
   const theme = useTheme();
-  const [items, setItems] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const appointmentsQuery = useAppointmentsList();
+  const items = (appointmentsQuery.data ?? []) as Appointment[];
+  const loading = appointmentsQuery.isLoading && items.length === 0;
   const [tab, setTab] = useState<TabType>('HOTEL');
   const [description, setDescription] = useState('');
   const [plateNumber, setPlateNumber] = useState('');
   const [serviceType, setServiceType] = useState('Periyodik bakım');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const res = await api.get<ApiResponse<Appointment> & { items: Appointment[] }>('/appointments');
-    setItems(res.items ?? []);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      load()
-        .catch((e) => setError((e as Error).message))
-        .finally(() => setLoading(false));
-    }, [load]),
-  );
 
   async function createRequest() {
     setSaving(true);
@@ -74,7 +64,7 @@ export default function AppointmentsScreen() {
         setDescription('');
         setPlateNumber('');
       }
-      await load();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.appointments });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -85,7 +75,7 @@ export default function AppointmentsScreen() {
   async function cancelAppointment(id: string) {
     try {
       await api.patch(`/appointments/${id}/cancel`, {});
-      await load();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.appointments });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -94,7 +84,7 @@ export default function AppointmentsScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.backgroundSecondary }]} edges={['top']}>
       <FlatList
-        data={loading ? [] : items}
+        data={items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -130,7 +120,7 @@ export default function AppointmentsScreen() {
                 onPress={createRequest}
               />
             </Card>
-            {error ? <ErrorText>{error}</ErrorText> : null}
+            {error || appointmentsQuery.error ? <ErrorText>{error ?? appointmentsQuery.error?.message}</ErrorText> : null}
           </View>
         }
         ListEmptyComponent={loading ? <Loader /> : <EmptyState icon="calendar-outline" title="Talep yok" message="Henüz randevu talebiniz bulunmuyor." />}

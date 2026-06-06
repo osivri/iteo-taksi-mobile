@@ -1,11 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
-import { Link, router, useFocusEffect } from 'expo-router';
+import { Link, router } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, shadow, spacing } from '@/constants/theme';
+import { usePaymentsList } from '@/hooks/queries/lists';
+import { queryKeys } from '@/hooks/queries/keys';
 import { api, ApiResponse } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, ErrorText, Loader, ScreenHeader, SectionTitle, useTheme } from '@/components/ui';
 
@@ -42,28 +45,16 @@ const paymentTypeLabels: Record<string, string> = {
 
 export default function PaymentsScreen() {
   const theme = useTheme();
-  const [items, setItems] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const paymentsQuery = usePaymentsList();
+  const items = paymentsQuery.data ?? [];
+  const loading = paymentsQuery.isLoading && items.length === 0;
   const [paying, setPaying] = useState(false);
-
-  const load = useCallback(async () => {
-    const res = await api.get<ApiResponse<Payment> & { items: Payment[] }>('/payments');
-    setItems(res.items ?? []);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      load()
-        .catch((e) => setError((e as Error).message))
-        .finally(() => setLoading(false));
-    }, [load]),
-  );
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function startPayment() {
     setPaying(true);
-    setError(null);
+    setActionError(null);
     try {
       const res = await api.post<ApiResponse<{ payment: Payment; checkoutUrl: string }>>('/payments/checkout', {
         type: 'DUES',
@@ -74,9 +65,10 @@ export default function PaymentsScreen() {
       if (!payment || !checkoutUrl) throw new Error('Ödeme oluşturulamadı');
 
       await WebBrowser.openBrowserAsync(checkoutUrl);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.payments });
       router.push({ pathname: '/payment/result', params: { id: payment.id } });
     } catch (e) {
-      setError((e as Error).message);
+      setActionError((e as Error).message);
     } finally {
       setPaying(false);
     }
@@ -100,13 +92,11 @@ export default function PaymentsScreen() {
               <Text style={[styles.duesAmount, { color: theme.text }]}>150 ₺</Text>
               <Button title={paying ? 'İşleniyor...' : 'Hemen Öde'} icon="lock-closed" loading={paying} onPress={startPayment} style={{ marginTop: spacing.md }} />
             </Card>
-            {error ? <ErrorText>{error}</ErrorText> : null}
+            {actionError || paymentsQuery.error ? <ErrorText>{actionError ?? paymentsQuery.error?.message}</ErrorText> : null}
             <SectionTitle>Ödeme Geçmişi</SectionTitle>
           </View>
         }
-        ListEmptyComponent={
-          loading ? <Loader /> : <EmptyState icon="card-outline" title="Ödeme yok" message="Henüz bir ödeme kaydınız bulunmuyor." />
-        }
+        ListEmptyComponent={loading ? <Loader /> : <EmptyState icon="card-outline" title="Ödeme yok" message="Henüz bir ödeme kaydınız bulunmuyor." />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         renderItem={({ item }) => (
           <Link href={`/payment/${item.id}`} asChild>

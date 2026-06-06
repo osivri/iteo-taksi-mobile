@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RemoteImage } from '@/components/RemoteImage';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, spacing } from '@/constants/theme';
@@ -79,7 +80,7 @@ export default function FinanceDetailScreen() {
                     ) : null}
                   </View>
                 ) : null}
-                <Image source={{ uri: item.receiptImageUrl }} style={styles.receipt} resizeMode="contain" />
+                <RemoteImage uri={item.receiptImageUrl} style={styles.receipt} contentFit="contain" />
                 <Pressable
                   onPress={async () => {
                     const opened = await openSafeUrl(item.receiptImageUrl!);

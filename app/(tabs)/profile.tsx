@@ -1,13 +1,17 @@
-import { useCallback, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useFocusEffect } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { RemoteImage } from '@/components/RemoteImage';
 import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, spacing } from '@/constants/theme';
 import { api, ApiResponse } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { queryKeys } from '@/hooks/queries/keys';
+import { appendImageToFormData, pickAndPrepareFromLibrary } from '@/lib/image-upload';
 import { Button, Card, ErrorText, Field, ListRow, Loader, useTheme } from '@/components/ui';
 import { roleDashboardTitles, type UserRole } from '@/lib/dashboard';
 
@@ -31,8 +35,10 @@ interface UploadResult {
 export default function ProfileScreen() {
   const theme = useTheme();
   const { signOut } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const profileQuery = useProfile<Profile>();
+  const profile = profileQuery.data ?? null;
+  const loading = profileQuery.isLoading && !profile;
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -45,54 +51,29 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const loadProfile = useCallback(() => {
-    setLoading(true);
-    api
-      .get<ApiResponse<Profile>>('/users/me')
-      .then((res) => {
-        const p = res.data ?? null;
-        setProfile(p);
-        if (p) {
-          setFirstName(p.firstName);
-          setLastName(p.lastName);
-          setPhone(p.phone ?? '');
-          setCity(p.city ?? '');
-          setDistrict(p.district ?? '');
-          setAddressLine(p.addressLine ?? '');
-          setProfileImageUrl(p.profileImageUrl);
-        }
-        setError(null);
-      })
-      .catch((e) => setError((e as Error).message))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useFocusEffect(useCallback(() => { loadProfile(); }, [loadProfile]));
+  useEffect(() => {
+    if (!profile) return;
+    setFirstName(profile.firstName);
+    setLastName(profile.lastName);
+    setPhone(profile.phone ?? '');
+    setCity(profile.city ?? '');
+    setDistrict(profile.district ?? '');
+    setAddressLine(profile.addressLine ?? '');
+    setProfileImageUrl(profile.profileImageUrl);
+  }, [profile]);
 
   async function pickPhoto() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
+    const prepared = await pickAndPrepareFromLibrary({ allowsEditing: true, aspect: [1, 1] });
+    if (!prepared) {
       setError('Galeri erişim izni gerekli.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.85,
-      allowsEditing: true,
-      aspect: [1, 1],
-    });
-    if (result.canceled || !result.assets[0]) return;
 
-    const asset = result.assets[0];
     setUploading(true);
     setError(null);
     try {
       const formData = new FormData();
-      formData.append('file', {
-        uri: asset.uri,
-        name: 'profile.jpg',
-        type: asset.mimeType ?? 'image/jpeg',
-      } as unknown as Blob);
+      appendImageToFormData(formData, { ...prepared, name: 'profile.jpg' });
       const upload = await api.upload<ApiResponse<UploadResult>>('/storage/profile-images', formData);
       const url = upload.data?.url;
       if (!url) throw new Error('Fotoğraf yüklenemedi');
@@ -118,7 +99,7 @@ export default function ProfileScreen() {
         profileImageUrl: profileImageUrl ?? undefined,
       });
       setEditing(false);
-      loadProfile();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.profile });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -156,7 +137,7 @@ export default function ProfileScreen() {
         <View style={styles.hero}>
           <Pressable onPress={editing ? pickPhoto : undefined} disabled={!editing || uploading} style={styles.avatarWrap}>
             {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              <RemoteImage uri={avatarUrl} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{initials}</Text>

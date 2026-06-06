@@ -1,12 +1,18 @@
-import { useCallback, useState } from 'react';
-import { Alert, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useFocusEffect } from 'expo-router';
+import { Stack } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import { RemoteImage } from '@/components/RemoteImage';
 import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, shadow, spacing } from '@/constants/theme';
+import { useForgottenItemsList } from '@/hooks/queries/lists';
+import { useVehiclesList } from '@/hooks/queries/vehicles';
+import { queryKeys } from '@/hooks/queries/keys';
 import { api, ApiResponse } from '@/lib/api';
+import { appendImageToFormData, prepareImageForUpload } from '@/lib/image-upload';
 import { Badge, Button, Card, EmptyState, ErrorText, Field, Loader, ScreenHeader, SectionTitle, useTheme } from '@/components/ui';
 
 interface Vehicle {
@@ -45,9 +51,12 @@ const statusTone: Record<string, 'success' | 'danger' | 'warning' | 'neutral'> =
 
 export default function ForgottenItemsScreen() {
   const theme = useTheme();
-  const [items, setItems] = useState<ForgottenItem[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const itemsQuery = useForgottenItemsList();
+  const vehiclesQuery = useVehiclesList();
+  const items = itemsQuery.data ?? [];
+  const vehicles = (vehiclesQuery.data ?? []) as Vehicle[];
+  const loading = itemsQuery.isLoading && items.length === 0;
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -57,25 +66,9 @@ export default function ForgottenItemsScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoPath, setPhotoPath] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    const [itemsRes, vehiclesRes] = await Promise.all([
-      api.get<ApiResponse<ForgottenItem> & { items: ForgottenItem[] }>('/forgotten-items'),
-      api.get<ApiResponse<Vehicle[]>>('/vehicles'),
-    ]);
-    setItems(itemsRes.items ?? []);
-    const v = Array.isArray(vehiclesRes.data) ? vehiclesRes.data : [];
-    setVehicles(v);
-    if (!vehicleId && v[0]) setVehicleId(v[0].id);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      load()
-        .catch((e) => setError((e as Error).message))
-        .finally(() => setLoading(false));
-    }, [load]),
-  );
+  useEffect(() => {
+    if (!vehicleId && vehicles[0]) setVehicleId(vehicles[0].id);
+  }, [vehicles, vehicleId]);
 
   async function pickPhoto(source: 'camera' | 'gallery') {
     const permission =
@@ -96,18 +89,15 @@ export default function ForgottenItemsScreen() {
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
-    setPhotoUri(asset.uri);
+    const prepared = await prepareImageForUpload(asset.uri);
+    setPhotoUri(prepared.uri);
     setPhotoPath(null);
     setUploading(true);
     setError(null);
 
     try {
       const formData = new FormData();
-      formData.append('file', {
-        uri: asset.uri,
-        name: 'forgotten-item.jpg',
-        type: asset.mimeType ?? 'image/jpeg',
-      } as unknown as Blob);
+      appendImageToFormData(formData, { ...prepared, name: 'forgotten-item.jpg' });
 
       const upload = await api.upload<ApiResponse<UploadResult>>('/storage/forgotten-items', formData);
       const path = upload.data?.path;
@@ -154,7 +144,7 @@ export default function ForgottenItemsScreen() {
       setDescription('');
       setPhotoUri(null);
       setPhotoPath(null);
-      await load();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.forgottenItems });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -209,7 +199,7 @@ export default function ForgottenItemsScreen() {
             <Text style={[styles.label, { color: theme.textSecondary }]}>Fotoğraf</Text>
             <Pressable onPress={showPhotoOptions} disabled={uploading} style={[styles.photoBox, { borderColor: theme.border }]}>
               {photoUri ? (
-                <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
+                <RemoteImage uri={photoUri} style={styles.photoPreview} />
               ) : (
                 <View style={styles.photoPlaceholder}>
                   <Ionicons name="camera-outline" size={32} color={theme.textSecondary} />
@@ -232,7 +222,7 @@ export default function ForgottenItemsScreen() {
         )}
       </Card>
 
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {error || itemsQuery.error ? <ErrorText>{error ?? itemsQuery.error?.message}</ErrorText> : null}
       <SectionTitle>Bildirimlerim</SectionTitle>
     </View>
   );
@@ -242,7 +232,7 @@ export default function ForgottenItemsScreen() {
       <Stack.Screen options={{ headerShown: true, title: 'Unutulan Eşya' }} />
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.backgroundSecondary }]} edges={['bottom']}>
         <FlatList
-          data={loading ? [] : items}
+          data={items}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.content}
           ListHeaderComponent={header}
@@ -251,7 +241,7 @@ export default function ForgottenItemsScreen() {
           renderItem={({ item }) => (
             <View style={[styles.row, { backgroundColor: theme.card, borderColor: theme.border }, theme.scheme === 'light' ? shadow.card : null]}>
               {item.photoUrl ? (
-                <Image source={{ uri: item.photoUrl }} style={styles.thumb} />
+                <RemoteImage uri={item.photoUrl} style={styles.thumb} />
               ) : (
                 <View style={[styles.thumb, styles.thumbPlaceholder]}>
                   <Ionicons name="image-outline" size={20} color={theme.textSecondary} />
@@ -286,7 +276,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: fontSize.lg, fontWeight: '900', marginBottom: spacing.md },
   label: { fontSize: fontSize.xs, fontWeight: '800', letterSpacing: 0.5, marginBottom: spacing.xs, textTransform: 'uppercase' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
-  chip: { borderWidth: 1, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  chip: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   chipText: { fontSize: fontSize.sm, fontWeight: '800' },
   photoBox: { borderWidth: 1, borderRadius: radius.lg, overflow: 'hidden', marginBottom: spacing.md, minHeight: 180 },
   photoPreview: { width: '100%', height: 200 },
