@@ -4,7 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, spacing } from '@/constants/theme';
 import { api, ApiResponse } from '@/lib/api';
-import { Badge, Button, Card, EmptyState, ErrorText, Loader, ScreenHeader, useTheme } from '@/components/ui';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
+import { Badge, Button, Card, EmptyState, ErrorText, Loader, useTheme } from '@/components/ui';
 
 const DOC_TYPES = [
   { key: 'DRIVERS_LICENSE', label: 'Ehliyet' },
@@ -85,10 +87,11 @@ export default function DocumentsScreen() {
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View style={{ gap: spacing.lg }}>
-            <ScreenHeader eyebrow="Doğrulama" title="Belgelerim" icon="document-text" />
+            <MemberSubpageToolbar />
+            <ModulePageHero badge="Doğrulama" title="Belgelerim" description="Üyelik ve araç belgelerinizi yükleyin, onay durumunu takip edin." icon="document-text" />
             <Card>
               <Text style={{ color: theme.textSecondary, lineHeight: 22 }}>
-                Şoför ve plaka sahibi doğrulaması için ehliyet, ruhsat ve SRC belgelerinizi yükleyin.
+                Şoför ve oda üyesi doğrulaması için ehliyet, ruhsat ve SRC belgelerinizi yükleyin.
               </Text>
             </Card>
             {DOC_TYPES.map((doc) => (

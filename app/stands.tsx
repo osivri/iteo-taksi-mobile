@@ -3,7 +3,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, spacing } from '@/constants/theme';
 import { useStands } from '@/hooks/queries/catalog';
-import { EmptyState, ErrorText, Loader, ScreenHeader, useTheme } from '@/components/ui';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
+import { EmptyState, ErrorText, Loader, useTheme } from '@/components/ui';
 
 export default function StandsScreen() {
   const theme = useTheme();
@@ -16,7 +18,12 @@ export default function StandsScreen() {
         data={items}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.content}
-        ListHeaderComponent={<ScreenHeader eyebrow="Rehber" title="Duraklar" icon="location" />}
+        ListHeaderComponent={
+          <View style={{ gap: 12 }}>
+            <MemberSubpageToolbar />
+            <ModulePageHero badge="Rehber" title="Duraklar" description="İstanbul taksi durakları rehberi ve konum bilgileri." icon="location" />
+          </View>
+        }
         ListEmptyComponent={query.isLoading ? <Loader /> : <EmptyState icon="location-outline" title="Durak yok" message="Kayıtlı durak bulunamadı." />}
         ListFooterComponent={query.error ? <ErrorText>{query.error.message}</ErrorText> : null}
         renderItem={({ item }) => (

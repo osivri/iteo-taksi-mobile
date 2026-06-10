@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, shadow, spacing } from '@/constants/theme';
 import { useOhsList } from '@/hooks/queries/lists';
 import { api, ApiResponse } from '@/lib/api';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
 import { Button, Card, EmptyState, Field, Loader, SectionTitle, useTheme } from '@/components/ui';
 
 interface OhsContent {
@@ -42,8 +45,10 @@ export default function OhsScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundSecondary }]} edges={['top']}>
       <View style={styles.content}>
+        <MemberSubpageToolbar />
+        <ModulePageHero badge="İş Sağlığı" title="İSG" description="Danışman, eğitim içerikleri ve sık sorulan sorular." icon="shield-checkmark" />
         <Card>
           <View style={styles.chatHead}>
             <View style={styles.chatIcon}>
@@ -105,7 +110,7 @@ export default function OhsScreen() {
           </Pressable>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

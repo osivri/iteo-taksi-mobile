@@ -1,14 +1,49 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiResponse } from '@/lib/api';
+import { parseApiItems } from '@/lib/parse-api-list';
+import type { Listing } from '@/lib/listings-shared';
 import { queryKeys } from './keys';
 
-export function useListings() {
+export interface ListingsFilters {
+  type?: string;
+  district?: string;
+  neighborhood?: string;
+  limit?: number;
+}
+
+export function useListings(filters: ListingsFilters = {}) {
+  const { type, district, neighborhood, limit = 50 } = filters;
   return useQuery({
-    queryKey: queryKeys.listings,
+    queryKey: queryKeys.listings({ type, district, neighborhood }),
     queryFn: async () => {
-      const res = await api.get<ApiResponse<{ items: Record<string, unknown>[] }> & { items?: Record<string, unknown>[] }>('/listings');
-      return res.data?.items ?? res.items ?? [];
+      const params = new URLSearchParams({ limit: String(limit) });
+      if (type && type !== 'ALL') params.set('type', type);
+      if (district?.trim()) params.set('district', district.trim());
+      if (neighborhood?.trim()) params.set('neighborhood', neighborhood.trim());
+      const res = await api.get<ApiResponse<{ items: Listing[] }> & { items?: Listing[] }>(`/listings?${params}`);
+      return parseApiItems<Listing>(res);
     },
+  });
+}
+
+export function useMyListings() {
+  return useQuery({
+    queryKey: queryKeys.listingsMine,
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<{ items: Listing[] }> & { items?: Listing[] }>('/listings/mine?limit=50');
+      return parseApiItems<Listing>(res);
+    },
+  });
+}
+
+export function useListing(id: string) {
+  return useQuery({
+    queryKey: queryKeys.listing(id),
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<Listing>>(`/listings/${id}`);
+      return res.data ?? null;
+    },
+    enabled: Boolean(id),
   });
 }
 
@@ -17,7 +52,7 @@ export function useStands() {
     queryKey: queryKeys.stands,
     queryFn: async () => {
       const res = await api.get<ApiResponse<{ items: Record<string, unknown>[] }> & { items?: Record<string, unknown>[] }>('/stands?limit=100');
-      return res.data?.items ?? res.items ?? [];
+      return parseApiItems<Record<string, unknown>>(res);
     },
   });
 }
@@ -27,7 +62,7 @@ export function useSpareParts() {
     queryKey: queryKeys.spareParts,
     queryFn: async () => {
       const res = await api.get<ApiResponse<{ items: Record<string, unknown>[] }> & { items?: Record<string, unknown>[] }>('/spare-parts');
-      return res.data?.items ?? res.items ?? (Array.isArray(res.data) ? res.data : []);
+      return parseApiItems<Record<string, unknown>>(res);
     },
   });
 }

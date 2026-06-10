@@ -7,7 +7,9 @@ import { fontSize, radius, spacing } from '@/constants/theme';
 import { FinanceBarChart, FinanceLineChart, PeriodTabs } from '@/components/FinanceUi';
 import type { FinancePeriod } from '@/lib/date-ranges';
 import type { FinanceSummary, FinanceTrendPoint } from '@/hooks/queries/finance';
-import { Button, Card, ErrorText, Field, ScreenHeader, SectionTitle, useTheme } from '@/components/ui';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
+import { Button, Card, ErrorText, Field, SectionTitle, useTheme } from '@/components/ui';
 
 type AppTheme = ReturnType<typeof useTheme>;
 
@@ -61,7 +63,13 @@ function FinanceListHeaderComponent({
 }: FinanceListHeaderProps) {
   return (
     <View style={{ gap: spacing.lg }}>
-      <ScreenHeader eyebrow="Gelir & Gider" title="Muhasebe" icon="wallet" />
+      <MemberSubpageToolbar showBack={false} />
+      <ModulePageHero
+        badge="Muhasebe"
+        title="Gelir & Gider"
+        description="Plaka bazlı hasılat ve giderlerinizi takip edin, fiş tarayın ve dönemsel raporlarınızı görün."
+        icon="wallet"
+      />
 
       {requiresPlate ? (
         <Card>

@@ -27,7 +27,11 @@ function navigateFromNotificationData(data: Record<string, unknown> | undefined)
     return;
   }
 
-  if (type === 'APPOINTMENT') router.push('/(tabs)/appointments');
+  if (type === 'APPOINTMENT') {
+    const appointmentType = typeof data.appointmentType === 'string' ? data.appointmentType : null;
+    router.push(appointmentType === 'AUTO_SERVICE' ? '/service-appointments' : '/hotel-appointments');
+    return;
+  }
   else if (type === 'PAYMENT') router.push('/(tabs)/payments');
   else if (type === 'REMINDER') router.push('/(tabs)/vehicles');
   else router.push('/notifications');

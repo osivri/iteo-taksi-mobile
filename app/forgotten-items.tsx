@@ -13,7 +13,9 @@ import { useVehiclesList } from '@/hooks/queries/vehicles';
 import { queryKeys } from '@/hooks/queries/keys';
 import { api, ApiResponse } from '@/lib/api';
 import { appendImageToFormData, prepareImageForUpload } from '@/lib/image-upload';
-import { Badge, Button, Card, EmptyState, ErrorText, Field, Loader, ScreenHeader, SectionTitle, useTheme } from '@/components/ui';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
+import { Badge, Button, Card, EmptyState, ErrorText, Field, Loader, SectionTitle, useTheme } from '@/components/ui';
 
 interface Vehicle {
   id: string;
@@ -154,10 +156,11 @@ export default function ForgottenItemsScreen() {
 
   const header = (
     <View style={{ gap: spacing.lg }}>
-      <ScreenHeader
-        eyebrow="Oda Hizmeti"
+      <MemberSubpageToolbar />
+      <ModulePageHero
+        badge="Oda Hizmeti"
         title="Unutulan Eşya"
-        subtitle="Araçta bulunan unutulan eşyayı fotoğraflayıp odaya bildirin."
+        description="Araçta bulunan unutulan eşyayı fotoğraflayıp odaya bildirin."
         icon="briefcase-outline"
       />
 

@@ -6,7 +6,9 @@ import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, spacing } from '@/constants/theme';
 import { useMyRatings } from '@/hooks/queries/catalog';
 import { api, ApiResponse } from '@/lib/api';
-import { Button, Card, EmptyState, ErrorText, Loader, ScreenHeader, useTheme } from '@/components/ui';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
+import { Button, Card, EmptyState, ErrorText, Loader, useTheme } from '@/components/ui';
 
 export default function RatingsScreen() {
   const theme = useTheme();
@@ -44,7 +46,8 @@ export default function RatingsScreen() {
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View style={{ gap: spacing.lg }}>
-            <ScreenHeader eyebrow="Şoför" title="Puanlarım" icon="star" />
+            <MemberSubpageToolbar />
+            <ModulePageHero badge="Şoför" title="Puanlarım" description="QR kod ile aldığınız yolcu puanlarını ve ortalamanızı görün." icon="star" />
             <Card>
               <Text style={[styles.avg, { color: theme.text }]}>{summary?.average ?? 0}</Text>
               <Text style={{ color: theme.textSecondary }}>{summary?.count ?? 0} değerlendirme</Text>

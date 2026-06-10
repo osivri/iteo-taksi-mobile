@@ -4,7 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, shadow, spacing } from '@/constants/theme';
 import { useAnnouncementsList } from '@/hooks/queries/lists';
-import { Badge, Chip, EmptyState, ErrorText, Loader, ScreenHeader, useTheme } from '@/components/ui';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
+import { Badge, Chip, EmptyState, ErrorText, Loader, useTheme } from '@/components/ui';
 
 function excerpt(text: string, max = 140) {
   const trimmed = text.trim();
@@ -38,7 +40,8 @@ export default function AnnouncementsScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View>
-            <ScreenHeader eyebrow="Oda İletişimi" title="Duyurular" icon="megaphone" />
+            <MemberSubpageToolbar showBack={false} />
+            <ModulePageHero badge="Oda İletişimi" title="Duyurular" description="Resmi bildirimler, uyarılar ve oda duyuruları." icon="megaphone" />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
               {categories.map((cat) => (
                 <Chip key={cat} label={cat} active={category === cat} onPress={() => setCategory(cat)} />

@@ -11,7 +11,8 @@ interface Props {
 const highlights: Array<{ title: string; href: Href; icon: keyof typeof Ionicons.glyphMap }> = [
   { title: 'Duyurular', href: '/(tabs)/announcements', icon: 'megaphone-outline' },
   { title: 'Ödemeler', href: '/(tabs)/payments', icon: 'card-outline' },
-  { title: 'Randevu', href: '/(tabs)/appointments', icon: 'calendar-outline' },
+  { title: 'Otel', href: '/hotel-appointments', icon: 'business-outline' },
+  { title: 'Servis', href: '/service-appointments', icon: 'construct-outline' },
 ];
 
 export function MemberHome({ theme }: Props) {

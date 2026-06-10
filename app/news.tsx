@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, shadow, spacing } from '@/constants/theme';
 import { useNewsList } from '@/hooks/queries/lists';
 import { api, ApiResponse } from '@/lib/api';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
 import { Badge, EmptyState, ErrorText, Loader, useTheme } from '@/components/ui';
 
 interface NewsItem {
@@ -66,13 +69,19 @@ export default function NewsScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundSecondary }]} edges={['top']}>
       {error || newsQuery.error ? <ErrorText>{error ?? newsQuery.error?.message}</ErrorText> : null}
       <FlatList
         data={loading || detailLoading ? [] : items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={{ gap: 12, marginBottom: 12 }}>
+            <MemberSubpageToolbar />
+            <ModulePageHero badge="Gündem" title="Haberler" description="Sektör, oda ve güncel haberler." icon="newspaper" />
+          </View>
+        }
         ListEmptyComponent={loading || detailLoading ? <Loader /> : <EmptyState icon="newspaper-outline" title="Haber yok" message="Yeni haberler burada listelenecek." />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         renderItem={({ item }) => (
@@ -97,7 +106,7 @@ export default function NewsScreen() {
           </Pressable>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

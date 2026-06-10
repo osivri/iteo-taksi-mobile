@@ -6,7 +6,9 @@ import { fontSize, radius, SCREEN_BOTTOM_INSET, spacing } from '@/constants/them
 import { useSpareParts } from '@/hooks/queries/catalog';
 import { queryKeys } from '@/hooks/queries/keys';
 import { api } from '@/lib/api';
-import { Button, EmptyState, ErrorText, Loader, ScreenHeader, useTheme } from '@/components/ui';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
+import { Button, EmptyState, ErrorText, Loader, useTheme } from '@/components/ui';
 
 export default function SparePartsScreen() {
   const theme = useTheme();
@@ -38,7 +40,8 @@ export default function SparePartsScreen() {
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View style={{ gap: spacing.md }}>
-            <ScreenHeader eyebrow="Servis" title="Yedek Parça" icon="construct" />
+            <MemberSubpageToolbar />
+            <ModulePageHero badge="Servis" title="Yedek Parça" description="Oda anlaşmalı yedek parça kataloğu ve tedarikçi bilgileri." icon="construct" />
             {message ? <Text style={{ color: theme.text }}>{message}</Text> : null}
           </View>
         }

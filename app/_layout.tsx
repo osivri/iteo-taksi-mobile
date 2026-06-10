@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { AuthGate } from '@/components/AuthGate';
 import { IteoColors } from '@/constants/Colors';
 import { QueryProvider } from '@/providers/QueryProvider';
+import { MemberCockpitThemeProvider } from '@/providers/MemberCockpitThemeProvider';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -28,6 +29,11 @@ export default function RootLayout() {
     { name: 'help', title: 'Yardım & Destek' },
     { name: 'forgotten-items', title: 'Unutulan Eşya' },
     { name: 'services', title: 'Oda Hizmetleri' },
+    { name: 'service-tow', title: 'Çekici' },
+    { name: 'service-insurance', title: 'Sigorta' },
+    { name: 'service-complaint', title: 'Şikayet' },
+    { name: 'service-pirate-report', title: 'Korsan İhbar' },
+    { name: 'service-petition', title: 'Dilekçe' },
     { name: 'address', title: 'Adres Bilgileri' },
     { name: 'otp-login', title: 'Telefon ile Giriş' },
     { name: 'forgot-password', title: 'Şifremi Unuttum' },
@@ -37,12 +43,18 @@ export default function RootLayout() {
     { name: 'spare-parts', title: 'Yedek Parça' },
     { name: 'ratings', title: 'Puanlarım' },
     { name: 'documents', title: 'Belgelerim' },
+    { name: 'find-driver', title: 'Şoför Bul' },
+    { name: 'find-vehicle', title: 'Araç Bul' },
+    { name: 'hotel-appointments', title: 'Otel Konaklama' },
+    { name: 'service-appointments', title: 'Servis Randevu' },
+    { name: 'listing/[id]', title: 'İlan Detayı' },
   ];
 
   return (
     <QueryProvider>
-      <AuthGate />
-      <Stack
+      <MemberCockpitThemeProvider>
+        <AuthGate />
+        <Stack
         screenOptions={{
           headerShown: false,
           headerStyle: { backgroundColor: IteoColors.black },
@@ -63,11 +75,12 @@ export default function RootLayout() {
           <Stack.Screen
             key={screen.name}
             name={screen.name}
-            options={{ presentation: 'card', headerShown: true, title: screen.title }}
+            options={{ presentation: 'card', headerShown: false, title: screen.title }}
           />
         ))}
-      </Stack>
-      <StatusBar style="light" />
+        </Stack>
+        <StatusBar style="light" />
+      </MemberCockpitThemeProvider>
     </QueryProvider>
   );
 }

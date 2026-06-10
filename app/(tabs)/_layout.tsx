@@ -154,7 +154,7 @@ export default function TabLayout() {
       <Tabs.Screen name="vehicles" options={roleTab('vehicles')} />
       <Tabs.Screen name="announcements" options={roleTab('announcements')} />
       <Tabs.Screen name="payments" options={roleTab('payments')} />
-      <Tabs.Screen name="appointments" options={roleTab('appointments')} />
+      <Tabs.Screen name="appointments" options={{ href: null, title: 'Randevu' }} />
       <Tabs.Screen
         name="two"
         options={{

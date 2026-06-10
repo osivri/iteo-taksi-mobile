@@ -15,8 +15,12 @@ const portals: Array<{
   desc: string;
 }> = [
   { role: 'DRIVER', icon: 'car-sport', title: 'Şoför', desc: 'Hasılat, gider, plaka ve vardiya işlemleri' },
-  { role: 'PLATE_OWNER', icon: 'pricetags', title: 'Mal / Plaka Sahibi', desc: 'Plaka yönetimi, gelir-gider ve aidat takibi' },
-  { role: 'USER', icon: 'person', title: 'Oda Üyesi', desc: 'Duyuru, haber, ödeme ve randevu hizmetleri' },
+  {
+    role: 'PLATE_OWNER',
+    icon: 'person',
+    title: 'Oda Üyesi',
+    desc: 'Plaka yönetimi, gelir-gider, aidat ve oda hizmetleri',
+  },
 ];
 
 export default function WelcomeScreen() {

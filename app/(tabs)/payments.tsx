@@ -11,7 +11,9 @@ import { usePaymentsList } from '@/hooks/queries/lists';
 import { getFeeAmount, useFees } from '@/hooks/queries/fees';
 import { queryKeys } from '@/hooks/queries/keys';
 import { api, ApiResponse } from '@/lib/api';
-import { Badge, Button, Card, EmptyState, ErrorText, Loader, ScreenHeader, SectionTitle, useTheme } from '@/components/ui';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
+import { Badge, Button, Card, EmptyState, ErrorText, Loader, SectionTitle, useTheme } from '@/components/ui';
 
 interface Payment {
   id: string;
@@ -85,7 +87,8 @@ export default function PaymentsScreen() {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={{ gap: spacing.lg }}>
-            <ScreenHeader eyebrow="Aidat & Hizmet" title="Ödemeler" icon="card" />
+            <MemberSubpageToolbar showBack={false} />
+            <ModulePageHero badge="Aidat & Hizmet" title="Ödemeler" description="Oda aidatı ve hizmet ücretlerinizi görüntüleyin, online ödeme yapın." icon="card" />
             <Card style={styles.duesCard}>
               <View style={styles.duesIcon}>
                 <Ionicons name="card" size={24} color={IteoColors.black} />

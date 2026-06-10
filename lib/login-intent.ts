@@ -30,13 +30,13 @@ export const loginPortalCopy: Record<
     badge: 'Şoför Paneli',
   },
   PLATE_OWNER: {
-    title: 'Mal / Plaka Sahibi Girişi',
-    subtitle: 'Plaka, gelir-gider ve aidat takibiniz',
-    badge: 'Mal Sahibi Paneli',
+    title: 'Oda Üyesi Girişi',
+    subtitle: 'Plaka, gelir-gider, aidat ve oda hizmetleriniz',
+    badge: 'Oda Üyesi Paneli',
   },
   USER: {
-    title: 'Üye Girişi',
+    title: 'Oda Üyesi Girişi',
     subtitle: 'Duyuru, haber, ödeme ve randevu hizmetleri',
-    badge: 'Üye Paneli',
+    badge: 'Oda Üyesi Paneli',
   },
 };

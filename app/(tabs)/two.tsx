@@ -5,7 +5,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, shadow, spacing } from '@/constants/theme';
-import { ScreenHeader, Screen, useTheme } from '@/components/ui';
+import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
+import { ModulePageHero } from '@/components/ModulePageHero';
+import { Screen, useTheme } from '@/components/ui';
 import { getQuickActionsForRole, quickActionLabel, roleDashboardTitles, toMemberRole, type UserRole } from '@/lib/dashboard';
 
 interface Profile {
@@ -19,7 +21,8 @@ const menuIconByTitle: Record<string, keyof typeof Ionicons.glyphMap> = {
   Duyurular: 'megaphone-outline',
   Haberler: 'newspaper-outline',
   Ödemeler: 'card-outline',
-  Randevu: 'calendar-outline',
+  'Otel Konaklama': 'business-outline',
+  'Servis Randevu': 'construct-outline',
   'Unutulan Eşya': 'briefcase-outline',
   İSG: 'shield-checkmark-outline',
   Bildirimler: 'notifications-outline',
@@ -36,7 +39,8 @@ export default function MenuScreen() {
 
   return (
     <Screen scroll withTabBar>
-      <ScreenHeader eyebrow="İTEO Mobil" title="Menü" subtitle={`${roleDashboardTitles[role]} · tüm işlemler`} icon="grid" />
+      <MemberSubpageToolbar showBack={false} />
+      <ModulePageHero badge="İTEO Mobil" title="Menü" description={`${roleDashboardTitles[role]} · tüm işlemler`} icon="grid" />
 
       <View style={styles.grid}>
         {actions.map((action) => (

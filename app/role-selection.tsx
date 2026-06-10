@@ -11,8 +11,8 @@ import { getLoginIntent, loginPortalCopy, type MemberLoginRole } from '@/lib/log
 
 const roleLabels: Record<MemberLoginRole, string> = {
   DRIVER: 'Şoför Paneli',
-  PLATE_OWNER: 'Mal Sahibi Paneli',
-  USER: 'Üye Paneli',
+  PLATE_OWNER: 'Oda Üyesi Paneli',
+  USER: 'Oda Üyesi Paneli',
 };
 
 export default function RoleSelectionScreen() {

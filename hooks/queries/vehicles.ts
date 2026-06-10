@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiResponse } from '@/lib/api';
+import { parseApiItems } from '@/lib/parse-api-list';
 import { queryKeys } from './keys';
 
 export interface Vehicle {
@@ -42,8 +43,8 @@ export function useVehiclesList(enabled = true) {
     queryKey: queryKeys.vehicles,
     enabled,
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Vehicle[]>>('/vehicles');
-      return Array.isArray(res.data) ? res.data : [];
+      const res = await api.get<ApiResponse<Vehicle[]>>('/vehicles?limit=100');
+      return parseApiItems<Vehicle>(res);
     },
   });
 }
@@ -52,8 +53,8 @@ export function usePlateRequests() {
   return useQuery({
     queryKey: queryKeys.plateRequests,
     queryFn: async () => {
-      const res = await api.get<ApiResponse<PlateRequest[]>>('/vehicles/plate-requests');
-      return Array.isArray(res.data) ? res.data : [];
+      const res = await api.get<ApiResponse<PlateRequest[]>>('/vehicles/plate-requests?limit=100');
+      return parseApiItems<PlateRequest>(res);
     },
   });
 }
@@ -63,8 +64,8 @@ export function useAvailableVehicles(enabled: boolean) {
     queryKey: queryKeys.availableVehicles,
     enabled,
     queryFn: async () => {
-      const res = await api.get<ApiResponse<AvailableVehicle[]>>('/vehicles/marketplace/available-vehicles');
-      return Array.isArray(res.data) ? res.data : [];
+      const res = await api.get<ApiResponse<AvailableVehicle[]>>('/vehicles/marketplace/available-vehicles?limit=100');
+      return parseApiItems<AvailableVehicle>(res);
     },
   });
 }
@@ -74,8 +75,8 @@ export function useAvailableDrivers(enabled: boolean) {
     queryKey: queryKeys.availableDrivers,
     enabled,
     queryFn: async () => {
-      const res = await api.get<ApiResponse<AvailableDriver[]>>('/vehicles/marketplace/available-drivers');
-      return Array.isArray(res.data) ? res.data : [];
+      const res = await api.get<ApiResponse<AvailableDriver[]>>('/vehicles/marketplace/available-drivers?limit=100');
+      return parseApiItems<AvailableDriver>(res);
     },
   });
 }

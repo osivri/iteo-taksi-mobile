@@ -101,6 +101,18 @@ export function useServiceRequestsList() {
   });
 }
 
+export function useServiceRequestsByType(type: string) {
+  return useQuery({
+    queryKey: queryKeys.serviceRequestsByType(type),
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<{ id: string }> & { items: Array<{ id: string; type: string; title: string; description: string | null; plateNumber: string | null; status: string; createdAt: string }> }>(
+        `/service-requests?limit=50&type=${type}`,
+      );
+      return res.items ?? [];
+    },
+  });
+}
+
 type ForgottenListItem = {
   id: string;
   plateNumber: string;
