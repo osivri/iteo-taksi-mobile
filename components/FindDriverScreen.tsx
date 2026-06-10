@@ -18,7 +18,9 @@ import { api } from '@/lib/api';
 import { toMemberRole } from '@/lib/dashboard';
 import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
 import { ModulePageHero } from '@/components/ModulePageHero';
+import { MarketplaceLocationPicker } from '@/components/MarketplaceLocationPicker';
 import { Badge, Button, Card, EmptyState, ErrorText, Field, Loader, useTheme } from '@/components/ui';
+import { filterMarketplaceByLocation, formatItemLocationShort } from '@/lib/marketplace-location';
 
 const requestStatusLabels: Record<string, string> = {
   PENDING: 'Onay bekliyor',
@@ -42,6 +44,8 @@ export function FindDriverScreen() {
   const drivers = driversQuery.data ?? [];
 
   const [search, setSearch] = useState('');
+  const [district, setDistrict] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,15 +61,17 @@ export function FindDriverScreen() {
   );
 
   const filteredDrivers = useMemo(() => {
+    let list = filterMarketplaceByLocation(drivers, district, neighborhood);
     const q = search.trim().toLowerCase();
-    if (!q) return drivers;
-    return drivers.filter(
+    if (!q) return list;
+    return list.filter(
       (d) =>
         d.fullName.toLowerCase().includes(q) ||
         (d.memberNo?.toLowerCase().includes(q) ?? false) ||
-        (d.phone?.toLowerCase().includes(q) ?? false),
+        (d.phone?.toLowerCase().includes(q) ?? false) ||
+        (d.district?.toLowerCase().includes(q) ?? false),
     );
-  }, [drivers, search]);
+  }, [drivers, search, district, neighborhood]);
 
   const effectiveVehicleId = selectedVehicleId || driverlessVehicles[0]?.id || '';
 
@@ -127,15 +133,9 @@ export function FindDriverScreen() {
 
         {error ? <ErrorText>{error}</ErrorText> : null}
 
-        <View style={styles.statsRow}>
-          <StatPill label="Boş plaka" value={driverlessVehicles.length} theme={theme} />
-          <StatPill label="Boşta şoför" value={drivers.length} theme={theme} />
-          <StatPill label="Başvuru" value={pendingApplications.length} theme={theme} highlight={pendingApplications.length > 0} />
-        </View>
-
         {pendingApplications.length > 0 ? (
-          <Card style={{ marginBottom: spacing.lg }}>
-            <Text style={[styles.cardTitle, { color: theme.text }]}>Gelen şoför başvuruları</Text>
+          <Card style={{ marginBottom: spacing.sm, borderColor: IteoColors.yellow }}>
+            <Text style={[styles.cardTitle, { color: theme.text, marginBottom: spacing.sm }]}>Gelen başvurular</Text>
             {pendingApplications.map((r) => (
               <PendingRow key={r.id} request={r} theme={theme} actionId={actionId} onDecide={decideRequest} />
             ))}
@@ -148,49 +148,68 @@ export function FindDriverScreen() {
             <Button title="Plakalarım" icon="car-sport-outline" onPress={() => router.push('/(tabs)/vehicles')} />
           </Card>
         ) : (
-          <>
-            <Card style={{ marginBottom: spacing.lg }}>
-              <Text style={[styles.cardTitle, { color: theme.text }]}>1. Plaka seçin</Text>
-              <View style={styles.chipRow}>
-                {driverlessVehicles.map((v) => (
-                  <Pressable
-                    key={v.id}
-                    onPress={() => setSelectedVehicleId(v.id)}
-                    style={[
-                      styles.chip,
-                      {
-                        borderColor: effectiveVehicleId === v.id ? IteoColors.yellow : theme.border,
-                        backgroundColor: effectiveVehicleId === v.id ? IteoColors.yellowLight : theme.card,
-                      },
-                    ]}>
-                    <Text style={[styles.chipText, { color: theme.text }]}>{v.plateNumber}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </Card>
+          <Card>
+            <View style={styles.statsRow}>
+              <StatPill label="Boş plaka" value={driverlessVehicles.length} theme={theme} />
+              <StatPill label="Şoför" value={drivers.length} theme={theme} />
+              <StatPill label="Başvuru" value={pendingApplications.length} theme={theme} highlight={pendingApplications.length > 0} />
+            </View>
 
-            <Card>
-              <Text style={[styles.cardTitle, { color: theme.text }]}>2. Boşta şoförler</Text>
-              <Field
-                label="Ara"
-                icon="search-outline"
-                placeholder="İsim, üye no, telefon..."
-                value={search}
-                onChangeText={setSearch}
-              />
-              {loading ? (
-                <Loader />
-              ) : filteredDrivers.length === 0 ? (
-                <Text style={{ color: theme.textSecondary, fontSize: fontSize.sm, marginTop: spacing.sm }}>
-                  {drivers.length === 0 ? 'Şu an boşta şoför yok.' : 'Arama sonucu bulunamadı.'}
-                </Text>
-              ) : (
-                filteredDrivers.map((d) => (
-                  <DriverRow key={d.id} driver={d} theme={theme} actionId={actionId} onInvite={inviteDriver} />
-                ))
-              )}
-            </Card>
-          </>
+            <Text style={[styles.meta, { color: theme.textSecondary }]}>
+              {filteredDrivers.length} şoför listeleniyor
+            </Text>
+
+            <Text style={[styles.sectionLabel, { color: theme.text }]}>Davet plakası</Text>
+            <View style={styles.chipRow}>
+              {driverlessVehicles.map((v) => (
+                <Pressable
+                  key={v.id}
+                  onPress={() => setSelectedVehicleId(v.id)}
+                  style={[
+                    styles.chip,
+                    {
+                      borderColor: effectiveVehicleId === v.id ? IteoColors.yellow : theme.border,
+                      backgroundColor: effectiveVehicleId === v.id ? IteoColors.yellowLight : theme.card,
+                    },
+                  ]}>
+                  <Text style={[styles.chipText, { color: theme.text }]}>{v.plateNumber}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <MarketplaceLocationPicker
+              items={drivers}
+              district={district}
+              neighborhood={neighborhood}
+              onDistrictChange={setDistrict}
+              onNeighborhoodChange={setNeighborhood}
+              onReset={() => {
+                setDistrict('');
+                setNeighborhood('');
+              }}
+              entityLabel="şoför"
+            />
+
+            <Field
+              label="Ara"
+              icon="search-outline"
+              placeholder="İsim, üye no, telefon..."
+              value={search}
+              onChangeText={setSearch}
+            />
+
+            {loading ? (
+              <Loader />
+            ) : filteredDrivers.length === 0 ? (
+              <Text style={{ color: theme.textSecondary, fontSize: fontSize.sm, marginTop: spacing.sm }}>
+                {drivers.length === 0 ? 'Şu an boşta şoför yok.' : 'Seçili konum veya arama sonucu bulunamadı.'}
+              </Text>
+            ) : (
+              filteredDrivers.map((d) => (
+                <DriverRow key={d.id} driver={d} theme={theme} actionId={actionId} onInvite={inviteDriver} />
+              ))
+            )}
+          </Card>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -259,6 +278,7 @@ function DriverRow({
   actionId: string | null;
   onInvite: (id: string) => void;
 }) {
+  const location = formatItemLocationShort(driver);
   return (
     <View style={[styles.row, { borderColor: theme.border }]}>
       <View style={styles.flex}>
@@ -266,6 +286,9 @@ function DriverRow({
         <Text style={{ color: theme.textSecondary, fontSize: fontSize.xs }}>
           {[driver.memberNo ? `Üye No: ${driver.memberNo}` : null, driver.phone].filter(Boolean).join(' · ') || 'İletişim yok'}
         </Text>
+        {location ? (
+          <Text style={{ color: theme.textSecondary, fontSize: fontSize.xs, marginTop: 2 }}>📍 {location}</Text>
+        ) : null}
       </View>
       <Button title="Davet" size="md" fullWidth={false} loading={actionId === driver.id} onPress={() => onInvite(driver.id)} />
     </View>
@@ -277,7 +300,9 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: SCREEN_BOTTOM_INSET, gap: spacing.lg },
   flex: { flex: 1 },
   cardTitle: { fontSize: fontSize.lg, fontWeight: '900', marginBottom: spacing.md },
-  statsRow: { flexDirection: 'row', gap: spacing.sm },
+  meta: { fontSize: fontSize.xs, fontWeight: '700', marginBottom: spacing.sm },
+  sectionLabel: { fontSize: fontSize.sm, fontWeight: '800', marginBottom: spacing.xs },
+  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   statPill: { flex: 1, borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, alignItems: 'center' },
   statValue: { fontSize: fontSize.xl, fontWeight: '900' },
   statLabel: { fontSize: fontSize.xs, marginTop: 2, textAlign: 'center' },

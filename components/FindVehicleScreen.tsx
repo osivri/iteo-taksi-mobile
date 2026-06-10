@@ -18,7 +18,9 @@ import { api } from '@/lib/api';
 import { toMemberRole } from '@/lib/dashboard';
 import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
 import { ModulePageHero } from '@/components/ModulePageHero';
+import { MarketplaceLocationPicker } from '@/components/MarketplaceLocationPicker';
 import { Badge, Button, Card, EmptyState, ErrorText, Field, Loader, useTheme } from '@/components/ui';
+import { filterMarketplaceByLocation, formatItemLocationShort } from '@/lib/marketplace-location';
 
 const requestStatusLabels: Record<string, string> = {
   PENDING: 'Onay bekliyor',
@@ -49,6 +51,8 @@ export function FindVehicleScreen() {
   const requests = requestsQuery.data ?? [];
 
   const [search, setSearch] = useState('');
+  const [district, setDistrict] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
   const [plateNumber, setPlateNumber] = useState('');
   const [actionId, setActionId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -60,16 +64,18 @@ export function FindVehicleScreen() {
   );
 
   const filtered = useMemo(() => {
+    let list = filterMarketplaceByLocation(available, district, neighborhood);
     const q = search.trim().toLowerCase();
-    if (!q) return available;
-    return available.filter(
+    if (!q) return list;
+    return list.filter(
       (v) =>
         v.plateNumber.toLowerCase().includes(q) ||
         (v.brand?.toLowerCase().includes(q) ?? false) ||
         (v.model?.toLowerCase().includes(q) ?? false) ||
-        v.ownerName.toLowerCase().includes(q),
+        v.ownerName.toLowerCase().includes(q) ||
+        (v.district?.toLowerCase().includes(q) ?? false),
     );
-  }, [available, search]);
+  }, [available, search, district, neighborhood]);
 
   const invalidate = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.vehicles });
@@ -142,15 +148,9 @@ export function FindVehicleScreen() {
 
         {error ? <ErrorText>{error}</ErrorText> : null}
 
-        <View style={styles.statsRow}>
-          <StatPill label="Boş araç" value={available.length} theme={theme} />
-          <StatPill label="Davet" value={pendingInvites.length} theme={theme} highlight={pendingInvites.length > 0} />
-          <StatPill label="Onaylı" value={myVehicles.length} theme={theme} />
-        </View>
-
         {pendingInvites.length > 0 ? (
-          <Card style={{ marginBottom: spacing.lg }}>
-            <Text style={[styles.cardTitle, { color: theme.text }]}>Gelen plaka davetleri</Text>
+          <Card style={{ marginBottom: spacing.sm, borderColor: IteoColors.yellow }}>
+            <Text style={[styles.cardTitle, { color: theme.text, marginBottom: spacing.sm }]}>Gelen davetler</Text>
             {pendingInvites.map((r) => (
               <InviteRow key={r.id} request={r} theme={theme} actionId={actionId} onDecide={decideRequest} />
             ))}
@@ -158,7 +158,27 @@ export function FindVehicleScreen() {
         ) : null}
 
         <Card style={{ marginBottom: spacing.lg }}>
-          <Text style={[styles.cardTitle, { color: theme.text }]}>Kayıtlı boş araçlar</Text>
+          <View style={styles.statsRow}>
+            <StatPill label="Boş araç" value={available.length} theme={theme} />
+            <StatPill label="Davet" value={pendingInvites.length} theme={theme} highlight={pendingInvites.length > 0} />
+            <StatPill label="Onaylı" value={myVehicles.length} theme={theme} />
+          </View>
+
+          <Text style={[styles.meta, { color: theme.textSecondary }]}>{filtered.length} araç listeleniyor</Text>
+
+          <MarketplaceLocationPicker
+            items={available}
+            district={district}
+            neighborhood={neighborhood}
+            onDistrictChange={setDistrict}
+            onNeighborhoodChange={setNeighborhood}
+            onReset={() => {
+              setDistrict('');
+              setNeighborhood('');
+            }}
+            entityLabel="araç"
+          />
+
           <Field
             label="Ara"
             icon="search-outline"
@@ -166,11 +186,12 @@ export function FindVehicleScreen() {
             value={search}
             onChangeText={setSearch}
           />
+
           {loading ? (
             <Loader />
           ) : filtered.length === 0 ? (
             <Text style={{ color: theme.textSecondary, fontSize: fontSize.sm }}>
-              {available.length === 0 ? 'Şu an başvurulabilir araç yok.' : 'Arama sonucu bulunamadı.'}
+              {available.length === 0 ? 'Şu an başvurulabilir araç yok.' : 'Seçili konum veya arama sonucu bulunamadı.'}
             </Text>
           ) : (
             filtered.map((v) => (
@@ -270,6 +291,7 @@ function VehicleRow({
   actionId: string | null;
   onApply: (id: string) => void;
 }) {
+  const location = formatItemLocationShort(vehicle);
   return (
     <View style={[styles.row, { borderColor: theme.border }]}>
       <View style={styles.flex}>
@@ -277,6 +299,9 @@ function VehicleRow({
         <Text style={{ color: theme.textSecondary, fontSize: fontSize.xs }}>
           {[vehicle.brand, vehicle.model].filter(Boolean).join(' ') || 'Araç bilgisi yok'} · {vehicle.ownerName}
         </Text>
+        {location ? (
+          <Text style={{ color: theme.textSecondary, fontSize: fontSize.xs, marginTop: 2 }}>📍 {location}</Text>
+        ) : null}
       </View>
       {vehicle.hasPendingRequest ? (
         <Badge label="Başvuruldu" tone="warning" />
@@ -306,7 +331,8 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: SCREEN_BOTTOM_INSET, gap: spacing.lg },
   flex: { flex: 1 },
   cardTitle: { fontSize: fontSize.lg, fontWeight: '900', marginBottom: spacing.md },
-  statsRow: { flexDirection: 'row', gap: spacing.sm },
+  meta: { fontSize: fontSize.xs, fontWeight: '700', marginBottom: spacing.sm },
+  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   statPill: { flex: 1, borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, alignItems: 'center' },
   statValue: { fontSize: fontSize.xl, fontWeight: '900' },
   statLabel: { fontSize: fontSize.xs, marginTop: 2, textAlign: 'center' },

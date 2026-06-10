@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, shadow, spacing } from '@/constants/theme';
 import { useProfile } from '@/hooks/useProfile';
-import { useVehiclesList, type Vehicle } from '@/hooks/queries/vehicles';
+import { formatVehicleSummary, useVehiclesList, type Vehicle } from '@/hooks/queries/vehicles';
 import { queryKeys } from '@/hooks/queries/keys';
 import { api } from '@/lib/api';
 import { toMemberRole } from '@/lib/dashboard';
@@ -34,6 +34,10 @@ export default function VehiclesScreen() {
   const [plateNumber, setPlateNumber] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
+  const [year, setYear] = useState('');
+  const [inspectionExpiry, setInspectionExpiry] = useState('');
+  const [insuranceExpiry, setInsuranceExpiry] = useState('');
+  const [licenseExpiry, setLicenseExpiry] = useState('');
 
   const driverlessCount = useMemo(
     () => vehicles.filter((v) => v.status === 'ACTIVE' && !v.activeDriverId).length,
@@ -52,14 +56,23 @@ export default function VehiclesScreen() {
     setSaving(true);
     setActionError(null);
     try {
+      const parsedYear = year.trim() ? Number.parseInt(year.trim(), 10) : undefined;
       await api.post('/vehicles', {
         plateNumber: plateNumber.trim().toUpperCase(),
         brand: brand.trim() || undefined,
         model: model.trim() || undefined,
+        year: parsedYear && !Number.isNaN(parsedYear) ? parsedYear : undefined,
+        inspectionExpiry: inspectionExpiry.trim() || undefined,
+        insuranceExpiry: insuranceExpiry.trim() || undefined,
+        licenseExpiry: licenseExpiry.trim() || undefined,
       });
       setPlateNumber('');
       setBrand('');
       setModel('');
+      setYear('');
+      setInspectionExpiry('');
+      setInsuranceExpiry('');
+      setLicenseExpiry('');
       await invalidateVehicles();
     } catch (e) {
       setActionError((e as Error).message);
@@ -152,9 +165,28 @@ export default function VehiclesScreen() {
       {marketplaceCta}
       <Card>
         <Text style={[styles.cardTitle, { color: theme.text }]}>Yeni plaka ekle</Text>
+        <Text style={{ color: theme.textSecondary, fontSize: fontSize.sm, marginBottom: spacing.md }}>
+          Aracınızı odaya kaydedin
+        </Text>
         <Field label="Plaka" icon="car-outline" placeholder="34 ABC 123" value={plateNumber} onChangeText={(t) => setPlateNumber(t.toUpperCase())} autoCapitalize="characters" />
-        <Field label="Marka" placeholder="Opsiyonel" value={brand} onChangeText={setBrand} />
-        <Field label="Model" placeholder="Opsiyonel" value={model} onChangeText={setModel} />
+        <View style={styles.fieldRow}>
+          <View style={styles.fieldHalf}>
+            <Field label="Marka" placeholder="Fiat" value={brand} onChangeText={setBrand} />
+          </View>
+          <View style={styles.fieldHalf}>
+            <Field label="Model" placeholder="Egea" value={model} onChangeText={setModel} />
+          </View>
+        </View>
+        <Field label="Model yılı" placeholder="2020" value={year} onChangeText={setYear} keyboardType="number-pad" />
+        <Field label="Muayene bitiş" placeholder="YYYY-AA-GG" value={inspectionExpiry} onChangeText={setInspectionExpiry} />
+        <View style={styles.fieldRow}>
+          <View style={styles.fieldHalf}>
+            <Field label="Sigorta bitiş" placeholder="YYYY-AA-GG" value={insuranceExpiry} onChangeText={setInsuranceExpiry} />
+          </View>
+          <View style={styles.fieldHalf}>
+            <Field label="Ruhsat bitiş" placeholder="YYYY-AA-GG" value={licenseExpiry} onChangeText={setLicenseExpiry} />
+          </View>
+        </View>
         <Button title={saving ? 'Ekleniyor...' : 'Plaka Ekle'} icon="add" loading={saving} onPress={addOwnerVehicle} />
       </Card>
       {displayError ? <ErrorText>{displayError}</ErrorText> : null}
@@ -217,11 +249,7 @@ function ApprovedVehicleRow({ item }: { item: Vehicle }) {
       <Ionicons name="checkmark-circle" size={20} color={IteoColors.success} />
       <View style={styles.flex}>
         <Text style={styles.approvedPlate}>{item.plateNumber}</Text>
-        {(item.brand || item.model) && (
-          <Text style={{ color: '#166534', fontSize: fontSize.xs, marginTop: 2 }}>
-            {[item.brand, item.model].filter(Boolean).join(' ')}
-          </Text>
-        )}
+        <Text style={{ color: '#166534', fontSize: fontSize.xs, marginTop: 2 }}>{formatVehicleSummary(item)}</Text>
       </View>
     </View>
   );
@@ -246,7 +274,7 @@ function VehicleRow({
       <View style={styles.flex}>
         <Text style={[styles.plate, { color: theme.text }]}>{item.plateNumber}</Text>
         <Text style={{ color: theme.textSecondary, fontSize: fontSize.sm, marginTop: 2 }}>
-          {[item.brand, item.model].filter(Boolean).join(' ') || 'Marka/model belirtilmedi'}
+          {formatVehicleSummary(item)}
         </Text>
         <View style={{ marginTop: spacing.sm, flexDirection: 'row', gap: spacing.xs }}>
           <Badge label={item.status === 'ACTIVE' ? 'Aktif' : item.status} tone={item.status === 'ACTIVE' ? 'success' : 'neutral'} />
@@ -264,7 +292,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: SCREEN_BOTTOM_INSET },
-  cardTitle: { fontSize: fontSize.lg, fontWeight: '900', marginBottom: spacing.md },
+  cardTitle: { fontSize: fontSize.lg, fontWeight: '900', marginBottom: spacing.xs },
+  fieldRow: { flexDirection: 'row', gap: spacing.sm },
+  fieldHalf: { flex: 1 },
   cta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderRadius: radius.lg, padding: spacing.lg },
   ctaIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: IteoColors.black, alignItems: 'center', justifyContent: 'center' },
   ctaTitle: { fontSize: fontSize.md, fontWeight: '900' },

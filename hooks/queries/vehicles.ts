@@ -8,8 +8,14 @@ export interface Vehicle {
   plateNumber: string;
   brand: string | null;
   model: string | null;
+  year: number | null;
   status: string;
   activeDriverId?: string | null;
+}
+
+export function formatVehicleSummary(vehicle: Pick<Vehicle, 'brand' | 'model' | 'year'>): string {
+  const parts = [vehicle.brand, vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean);
+  return parts.join(' ') || 'Marka / model belirtilmedi';
 }
 
 export interface PlateRequest {
@@ -29,6 +35,9 @@ export interface AvailableVehicle {
   model: string | null;
   ownerName: string;
   hasPendingRequest: boolean;
+  district: string | null;
+  city: string | null;
+  addressLine: string | null;
 }
 
 export interface AvailableDriver {
@@ -36,6 +45,9 @@ export interface AvailableDriver {
   fullName: string;
   memberNo: string | null;
   phone: string | null;
+  district: string | null;
+  city: string | null;
+  addressLine: string | null;
 }
 
 export function useVehiclesList(enabled = true) {
