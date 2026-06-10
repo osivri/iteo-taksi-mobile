@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { IteoColors } from '@/constants/Colors';
-import { fontSize, radius, SCREEN_BOTTOM_INSET, shadow, spacing } from '@/constants/theme';
+import { fontSize, radius, SCREEN_BOTTOM_INSET, spacing } from '@/constants/theme';
 import {
   useAvailableDrivers,
   usePlateRequests,
@@ -16,18 +16,14 @@ import { queryKeys } from '@/hooks/queries/keys';
 import { useProfile } from '@/hooks/useProfile';
 import { api } from '@/lib/api';
 import { toMemberRole } from '@/lib/dashboard';
+import { filterMarketplaceByLocation, formatItemLocationShort } from '@/lib/marketplace-location';
 import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
 import { ModulePageHero } from '@/components/ModulePageHero';
+import { MarketplaceFilterHeader } from '@/components/marketplace/MarketplaceFilterHeader';
+import { MarketplaceHistoryCard } from '@/components/marketplace/MarketplaceHistoryCard';
+import { VehiclePlatePicker } from '@/components/marketplace/VehiclePlatePicker';
 import { MarketplaceLocationPicker } from '@/components/MarketplaceLocationPicker';
 import { Badge, Button, Card, EmptyState, ErrorText, Field, Loader, useTheme } from '@/components/ui';
-import { filterMarketplaceByLocation, formatItemLocationShort } from '@/lib/marketplace-location';
-
-const requestStatusLabels: Record<string, string> = {
-  PENDING: 'Onay bekliyor',
-  APPROVED: 'Onaylandı',
-  REJECTED: 'Reddedildi',
-  CANCELLED: 'İptal',
-};
 
 export function FindDriverScreen() {
   const theme = useTheme();
@@ -74,6 +70,12 @@ export function FindDriverScreen() {
   }, [drivers, search, district, neighborhood]);
 
   const effectiveVehicleId = selectedVehicleId || driverlessVehicles[0]?.id || '';
+  const selectedVehicle = driverlessVehicles.find((v) => v.id === effectiveVehicleId);
+
+  const resetLocation = () => {
+    setDistrict('');
+    setNeighborhood('');
+  };
 
   const invalidate = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.vehicles });
@@ -127,7 +129,7 @@ export function FindDriverScreen() {
         <ModulePageHero
           badge="Eşleştirme Pazarı"
           title="Şoför Bul"
-          description="Boş plakanız için onaylı şoförlere davet gönderin veya gelen başvuruları yönetin."
+          description="Plakanızı seçin, ilçe ve mahalleyle filtreleyin, uygun şoföre davet gönderin."
           icon="people"
         />
 
@@ -149,33 +151,28 @@ export function FindDriverScreen() {
           </Card>
         ) : (
           <Card>
-            <View style={styles.statsRow}>
-              <StatPill label="Boş plaka" value={driverlessVehicles.length} theme={theme} />
-              <StatPill label="Şoför" value={drivers.length} theme={theme} />
-              <StatPill label="Başvuru" value={pendingApplications.length} theme={theme} highlight={pendingApplications.length > 0} />
-            </View>
-
-            <Text style={[styles.meta, { color: theme.textSecondary }]}>
-              {filteredDrivers.length} şoför listeleniyor
-            </Text>
-
-            <Text style={[styles.sectionLabel, { color: theme.text }]}>Davet plakası</Text>
-            <View style={styles.chipRow}>
-              {driverlessVehicles.map((v) => (
-                <Pressable
-                  key={v.id}
-                  onPress={() => setSelectedVehicleId(v.id)}
-                  style={[
-                    styles.chip,
-                    {
-                      borderColor: effectiveVehicleId === v.id ? IteoColors.yellow : theme.border,
-                      backgroundColor: effectiveVehicleId === v.id ? IteoColors.yellowLight : theme.card,
-                    },
-                  ]}>
-                  <Text style={[styles.chipText, { color: theme.text }]}>{v.plateNumber}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <MarketplaceFilterHeader
+              district={district}
+              neighborhood={neighborhood}
+              onResetLocation={resetLocation}
+              resultCount={filteredDrivers.length}
+              resultLabel="şoför"
+              stats={[
+                { label: 'boş plaka', value: driverlessVehicles.length },
+                { label: 'şoför', value: drivers.length },
+                {
+                  label: 'başvuru',
+                  value: pendingApplications.length,
+                  highlight: pendingApplications.length > 0,
+                },
+              ]}
+            >
+              <VehiclePlatePicker
+                vehicles={driverlessVehicles}
+                selectedId={effectiveVehicleId}
+                onSelect={setSelectedVehicleId}
+              />
+            </MarketplaceFilterHeader>
 
             <MarketplaceLocationPicker
               items={drivers}
@@ -183,17 +180,14 @@ export function FindDriverScreen() {
               neighborhood={neighborhood}
               onDistrictChange={setDistrict}
               onNeighborhoodChange={setNeighborhood}
-              onReset={() => {
-                setDistrict('');
-                setNeighborhood('');
-              }}
+              onReset={resetLocation}
               entityLabel="şoför"
             />
 
             <Field
               label="Ara"
               icon="search-outline"
-              placeholder="İsim, üye no, telefon..."
+              placeholder="İsim, üye no, telefon veya ilçe..."
               value={search}
               onChangeText={setSearch}
             />
@@ -209,36 +203,19 @@ export function FindDriverScreen() {
                 <DriverRow key={d.id} driver={d} theme={theme} actionId={actionId} onInvite={inviteDriver} />
               ))
             )}
+
+            {selectedVehicle ? (
+              <Text style={[styles.footerNote, { color: theme.textSecondary }]}>
+                Davetler <Text style={{ fontWeight: '800', color: theme.text }}>{selectedVehicle.plateNumber}</Text>{' '}
+                plakasına gönderilir.
+              </Text>
+            ) : null}
           </Card>
         )}
+
+        <MarketplaceHistoryCard requests={requests} />
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function StatPill({
-  label,
-  value,
-  theme,
-  highlight,
-}: {
-  label: string;
-  value: number;
-  theme: ReturnType<typeof useTheme>;
-  highlight?: boolean;
-}) {
-  return (
-    <View
-      style={[
-        styles.statPill,
-        {
-          backgroundColor: highlight ? IteoColors.yellowLight : theme.card,
-          borderColor: highlight ? IteoColors.yellow : theme.border,
-        },
-      ]}>
-      <Text style={[styles.statValue, { color: theme.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{label}</Text>
-    </View>
   );
 }
 
@@ -299,16 +276,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: SCREEN_BOTTOM_INSET, gap: spacing.lg },
   flex: { flex: 1 },
-  cardTitle: { fontSize: fontSize.lg, fontWeight: '900', marginBottom: spacing.md },
-  meta: { fontSize: fontSize.xs, fontWeight: '700', marginBottom: spacing.sm },
-  sectionLabel: { fontSize: fontSize.sm, fontWeight: '800', marginBottom: spacing.xs },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  statPill: { flex: 1, borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, alignItems: 'center' },
-  statValue: { fontSize: fontSize.xl, fontWeight: '900' },
-  statLabel: { fontSize: fontSize.xs, marginTop: 2, textAlign: 'center' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
-  chipText: { fontSize: fontSize.sm, fontWeight: '800' },
+  cardTitle: { fontSize: fontSize.lg, fontWeight: '900' },
+  footerNote: { fontSize: fontSize.xs, marginTop: spacing.md, fontWeight: '600' },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
   actions: { flexDirection: 'row', gap: spacing.xs },
   plate: { fontSize: fontSize.md, fontWeight: '900' },

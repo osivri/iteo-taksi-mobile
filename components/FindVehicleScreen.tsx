@@ -16,11 +16,13 @@ import { queryKeys } from '@/hooks/queries/keys';
 import { useProfile } from '@/hooks/useProfile';
 import { api } from '@/lib/api';
 import { toMemberRole } from '@/lib/dashboard';
+import { filterMarketplaceByLocation, formatItemLocationShort } from '@/lib/marketplace-location';
 import { MemberSubpageToolbar } from '@/components/MemberSubpageToolbar';
 import { ModulePageHero } from '@/components/ModulePageHero';
+import { MarketplaceFilterHeader } from '@/components/marketplace/MarketplaceFilterHeader';
 import { MarketplaceLocationPicker } from '@/components/MarketplaceLocationPicker';
+import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { Badge, Button, Card, EmptyState, ErrorText, Field, Loader, useTheme } from '@/components/ui';
-import { filterMarketplaceByLocation, formatItemLocationShort } from '@/lib/marketplace-location';
 
 const requestStatusLabels: Record<string, string> = {
   PENDING: 'Onay bekliyor',
@@ -76,6 +78,11 @@ export function FindVehicleScreen() {
         (v.district?.toLowerCase().includes(q) ?? false),
     );
   }, [available, search, district, neighborhood]);
+
+  const resetLocation = () => {
+    setDistrict('');
+    setNeighborhood('');
+  };
 
   const invalidate = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.vehicles });
@@ -142,7 +149,7 @@ export function FindVehicleScreen() {
         <ModulePageHero
           badge="Eşleştirme Pazarı"
           title="Araç Bul"
-          description="Boş araçlara başvurun, gelen davetleri yönetin ve taleplerinizi takip edin."
+          description="İlçe ve mahalle seçerek boş araçları listeleyin, başvurun veya davetleri yönetin."
           icon="car-sport"
         />
 
@@ -158,13 +165,18 @@ export function FindVehicleScreen() {
         ) : null}
 
         <Card style={{ marginBottom: spacing.lg }}>
-          <View style={styles.statsRow}>
-            <StatPill label="Boş araç" value={available.length} theme={theme} />
-            <StatPill label="Davet" value={pendingInvites.length} theme={theme} highlight={pendingInvites.length > 0} />
-            <StatPill label="Onaylı" value={myVehicles.length} theme={theme} />
-          </View>
-
-          <Text style={[styles.meta, { color: theme.textSecondary }]}>{filtered.length} araç listeleniyor</Text>
+          <MarketplaceFilterHeader
+            district={district}
+            neighborhood={neighborhood}
+            onResetLocation={resetLocation}
+            resultCount={filtered.length}
+            resultLabel="araç"
+            stats={[
+              { label: 'boş araç', value: available.length },
+              { label: 'davet', value: pendingInvites.length, highlight: pendingInvites.length > 0 },
+              { label: 'onaylı', value: myVehicles.length },
+            ]}
+          />
 
           <MarketplaceLocationPicker
             items={available}
@@ -172,17 +184,14 @@ export function FindVehicleScreen() {
             neighborhood={neighborhood}
             onDistrictChange={setDistrict}
             onNeighborhoodChange={setNeighborhood}
-            onReset={() => {
-              setDistrict('');
-              setNeighborhood('');
-            }}
+            onReset={resetLocation}
             entityLabel="araç"
           />
 
           <Field
             label="Ara"
             icon="search-outline"
-            placeholder="Plaka, marka, oda üyesi..."
+            placeholder="Plaka, marka, oda üyesi veya ilçe..."
             value={search}
             onChangeText={setSearch}
           />
@@ -200,8 +209,7 @@ export function FindVehicleScreen() {
           )}
         </Card>
 
-        <Card style={{ marginBottom: spacing.lg }}>
-          <Text style={[styles.cardTitle, { color: theme.text }]}>Plaka numarasıyla başvuru</Text>
+        <CollapsibleSection title="Plaka numarasıyla başvuru (opsiyonel)">
           <Field
             label="Plaka"
             icon="car-outline"
@@ -211,10 +219,9 @@ export function FindVehicleScreen() {
             autoCapitalize="characters"
           />
           <Button title={saving ? 'Gönderiliyor...' : 'Onay Talebi Gönder'} icon="paper-plane-outline" loading={saving} onPress={submitPlateRequest} />
-        </Card>
+        </CollapsibleSection>
 
-        <Card>
-          <Text style={[styles.cardTitle, { color: theme.text }]}>Taleplerim</Text>
+        <CollapsibleSection title={`Taleplerim (${requests.length})`}>
           {requests.length === 0 ? (
             <EmptyState icon="document-text-outline" title="Talep yok" message="Henüz eşleştirme talebiniz bulunmuyor." />
           ) : (
@@ -223,35 +230,9 @@ export function FindVehicleScreen() {
           <Pressable onPress={() => router.push('/(tabs)/vehicles')} style={{ marginTop: spacing.md }}>
             <Text style={{ color: IteoColors.yellow, fontWeight: '800', fontSize: fontSize.sm }}>Çalışma plakalarım →</Text>
           </Pressable>
-        </Card>
+        </CollapsibleSection>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function StatPill({
-  label,
-  value,
-  theme,
-  highlight,
-}: {
-  label: string;
-  value: number;
-  theme: ReturnType<typeof useTheme>;
-  highlight?: boolean;
-}) {
-  return (
-    <View
-      style={[
-        styles.statPill,
-        {
-          backgroundColor: highlight ? IteoColors.yellowLight : theme.card,
-          borderColor: highlight ? IteoColors.yellow : theme.border,
-        },
-      ]}>
-      <Text style={[styles.statValue, { color: theme.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{label}</Text>
-    </View>
   );
 }
 
@@ -318,7 +299,8 @@ function RequestHistoryRow({ request, theme }: { request: PlateRequest; theme: R
       <View style={styles.flex}>
         <Text style={[styles.plate, { color: theme.text }]}>{request.plateNumber}</Text>
         <Text style={{ color: theme.textSecondary, fontSize: fontSize.xs }}>
-          {(request.initiatedBy ?? 'DRIVER') === 'OWNER' ? 'Davet' : 'Başvuru'}
+          {(request.initiatedBy ?? 'DRIVER') === 'OWNER' ? 'Davet' : 'Başvuru'} ·{' '}
+          {new Date(request.createdAt).toLocaleDateString('tr-TR')}
         </Text>
       </View>
       <Badge label={requestStatusLabels[request.status] ?? request.status} tone={requestStatusTone[request.status] ?? 'neutral'} />
@@ -330,12 +312,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: SCREEN_BOTTOM_INSET, gap: spacing.lg },
   flex: { flex: 1 },
-  cardTitle: { fontSize: fontSize.lg, fontWeight: '900', marginBottom: spacing.md },
-  meta: { fontSize: fontSize.xs, fontWeight: '700', marginBottom: spacing.sm },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  statPill: { flex: 1, borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, alignItems: 'center' },
-  statValue: { fontSize: fontSize.xl, fontWeight: '900' },
-  statLabel: { fontSize: fontSize.xs, marginTop: 2, textAlign: 'center' },
+  cardTitle: { fontSize: fontSize.lg, fontWeight: '900' },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
   actions: { flexDirection: 'row', gap: spacing.xs },
   plate: { fontSize: fontSize.md, fontWeight: '900' },

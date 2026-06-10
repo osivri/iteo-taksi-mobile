@@ -41,7 +41,7 @@ export function DriverHome({ theme, period, onPeriodChange, summary, error }: Pr
         theme={theme}
         tiles={[
           { title: 'Hasılat Ekle', href: '/(tabs)/finance', icon: 'add-circle-outline' },
-          { title: 'Boş Araçlar', href: '/(tabs)/vehicles', icon: 'search-outline' },
+          { title: 'Araç Bul', href: '/find-vehicle', icon: 'car-sport-outline' },
           { title: 'Unutulan Eşya', href: '/forgotten-items', icon: 'briefcase-outline' },
           { title: 'Puanlarım', href: '/ratings', icon: 'star-outline' },
         ]}

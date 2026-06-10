@@ -8,6 +8,7 @@ import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, shadow, spacing } from '@/constants/theme';
 import { useProfile } from '@/hooks/useProfile';
 import { formatVehicleSummary, useVehiclesList, type Vehicle } from '@/hooks/queries/vehicles';
+import { normalizeDateInput, parseVehicleYear, vehicleStatusLabels, vehicleStatusTone } from '@/lib/vehicles-shared';
 import { queryKeys } from '@/hooks/queries/keys';
 import { api } from '@/lib/api';
 import { toMemberRole } from '@/lib/dashboard';
@@ -53,18 +54,28 @@ export default function VehiclesScreen() {
       setActionError('Plaka alanı zorunludur.');
       return;
     }
+    if (year.trim() && parseVehicleYear(year) === undefined) {
+      setActionError('Geçerli bir model yılı girin (1980–' + (new Date().getFullYear() + 1) + ').');
+      return;
+    }
+    const inspection = normalizeDateInput(inspectionExpiry);
+    const insurance = normalizeDateInput(insuranceExpiry);
+    const license = normalizeDateInput(licenseExpiry);
+    if ((inspectionExpiry.trim() && !inspection) || (insuranceExpiry.trim() && !insurance) || (licenseExpiry.trim() && !license)) {
+      setActionError('Tarihleri YYYY-AA-GG formatında girin.');
+      return;
+    }
     setSaving(true);
     setActionError(null);
     try {
-      const parsedYear = year.trim() ? Number.parseInt(year.trim(), 10) : undefined;
       await api.post('/vehicles', {
         plateNumber: plateNumber.trim().toUpperCase(),
         brand: brand.trim() || undefined,
         model: model.trim() || undefined,
-        year: parsedYear && !Number.isNaN(parsedYear) ? parsedYear : undefined,
-        inspectionExpiry: inspectionExpiry.trim() || undefined,
-        insuranceExpiry: insuranceExpiry.trim() || undefined,
-        licenseExpiry: licenseExpiry.trim() || undefined,
+        year: parseVehicleYear(year),
+        inspectionExpiry: inspection,
+        insuranceExpiry: insurance,
+        licenseExpiry: license,
       });
       setPlateNumber('');
       setBrand('');
@@ -190,7 +201,15 @@ export default function VehiclesScreen() {
         <Button title={saving ? 'Ekleniyor...' : 'Plaka Ekle'} icon="add" loading={saving} onPress={addOwnerVehicle} />
       </Card>
       {displayError ? <ErrorText>{displayError}</ErrorText> : null}
-      <SectionTitle>Kayıtlı Plakalarım</SectionTitle>
+      <View style={styles.listHeader}>
+        <SectionTitle>Kayıtlı Plakalarım</SectionTitle>
+        {vehicles.length > 0 ? (
+          <Badge
+            label={driverlessCount > 0 ? `${driverlessCount} şoför aranıyor` : 'Tümü dolu'}
+            tone={driverlessCount > 0 ? 'warning' : 'neutral'}
+          />
+        ) : null}
+      </View>
     </View>
   );
 
@@ -249,7 +268,9 @@ function ApprovedVehicleRow({ item }: { item: Vehicle }) {
       <Ionicons name="checkmark-circle" size={20} color={IteoColors.success} />
       <View style={styles.flex}>
         <Text style={styles.approvedPlate}>{item.plateNumber}</Text>
-        <Text style={{ color: '#166534', fontSize: fontSize.xs, marginTop: 2 }}>{formatVehicleSummary(item)}</Text>
+        <Text style={{ color: '#166534', fontSize: fontSize.xs, marginTop: 2 }}>
+          Onaylı · {vehicleStatusLabels[item.status] ?? item.status} · {formatVehicleSummary(item)}
+        </Text>
       </View>
     </View>
   );
@@ -277,7 +298,7 @@ function VehicleRow({
           {formatVehicleSummary(item)}
         </Text>
         <View style={{ marginTop: spacing.sm, flexDirection: 'row', gap: spacing.xs }}>
-          <Badge label={item.status === 'ACTIVE' ? 'Aktif' : item.status} tone={item.status === 'ACTIVE' ? 'success' : 'neutral'} />
+          <Badge label={vehicleStatusLabels[item.status] ?? item.status} tone={vehicleStatusTone(item.status)} />
           {!item.activeDriverId ? <Badge label="Şoför aranıyor" tone="warning" /> : null}
         </View>
       </View>
@@ -293,6 +314,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: SCREEN_BOTTOM_INSET },
   cardTitle: { fontSize: fontSize.lg, fontWeight: '900', marginBottom: spacing.xs },
+  listHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap' },
   fieldRow: { flexDirection: 'row', gap: spacing.sm },
   fieldHalf: { flex: 1 },
   cta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderRadius: radius.lg, padding: spacing.lg },

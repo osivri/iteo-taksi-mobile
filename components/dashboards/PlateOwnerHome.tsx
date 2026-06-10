@@ -24,7 +24,7 @@ export function PlateOwnerHome({ theme, period, onPeriodChange, summary, error }
   return (
     <>
       <View style={[styles.hero, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <Text style={styles.heroBadge}>MAL / PLAKA SAHİBİ ÖZETİ</Text>
+      <Text style={styles.heroBadge}>ODA ÜYESİ ÖZETİ</Text>
       <PeriodTabs value={period} onChange={onPeriodChange} />
       <View style={styles.statsRow}>
         {stats.map((s) => (
@@ -46,7 +46,7 @@ export function PlateOwnerHome({ theme, period, onPeriodChange, summary, error }
         theme={theme}
         tiles={[
           { title: 'Plakalarım', href: '/(tabs)/vehicles', icon: 'car-sport-outline' },
-          { title: 'Şoför Bul', href: '/(tabs)/vehicles', icon: 'people-outline' },
+          { title: 'Şoför Bul', href: '/find-driver', icon: 'people-outline' },
           { title: 'Unutulan Eşya', href: '/forgotten-items', icon: 'briefcase-outline' },
           { title: 'Ödemeler', href: '/(tabs)/payments', icon: 'card-outline' },
         ]}
