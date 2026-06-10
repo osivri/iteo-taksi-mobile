@@ -29,6 +29,14 @@ export default function RootLayout() {
     { name: 'forgotten-items', title: 'Unutulan Eşya' },
     { name: 'services', title: 'Oda Hizmetleri' },
     { name: 'address', title: 'Adres Bilgileri' },
+    { name: 'otp-login', title: 'Telefon ile Giriş' },
+    { name: 'forgot-password', title: 'Şifremi Unuttum' },
+    { name: 'reset-password', title: 'Yeni Şifre' },
+    { name: 'listings', title: 'İlanlar' },
+    { name: 'stands', title: 'Duraklar' },
+    { name: 'spare-parts', title: 'Yedek Parça' },
+    { name: 'ratings', title: 'Puanlarım' },
+    { name: 'documents', title: 'Belgelerim' },
   ];
 
   return (
@@ -58,7 +66,6 @@ export default function RootLayout() {
             options={{ presentation: 'card', headerShown: true, title: screen.title }}
           />
         ))}
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
       <StatusBar style="light" />
     </QueryProvider>

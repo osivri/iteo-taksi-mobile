@@ -17,4 +17,9 @@ export const queryKeys = {
   ohs: ['ohs'] as const,
   serviceRequests: ['service-requests'] as const,
   forgottenItems: ['forgotten-items'] as const,
+  fees: ['fees'] as const,
+  listings: ['listings'] as const,
+  stands: ['stands'] as const,
+  spareParts: ['spareParts'] as const,
+  ratings: ['ratings'] as const,
 };

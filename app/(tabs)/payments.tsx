@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, SCREEN_BOTTOM_INSET, shadow, spacing } from '@/constants/theme';
 import { usePaymentsList } from '@/hooks/queries/lists';
+import { getFeeAmount, useFees } from '@/hooks/queries/fees';
 import { queryKeys } from '@/hooks/queries/keys';
 import { api, ApiResponse } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, ErrorText, Loader, ScreenHeader, SectionTitle, useTheme } from '@/components/ui';
@@ -47,6 +48,8 @@ export default function PaymentsScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const paymentsQuery = usePaymentsList();
+  const feesQuery = useFees();
+  const duesAmount = getFeeAmount(feesQuery.data, 'DUES', 150);
   const items = paymentsQuery.data ?? [];
   const loading = paymentsQuery.isLoading && items.length === 0;
   const [paying, setPaying] = useState(false);
@@ -58,7 +61,6 @@ export default function PaymentsScreen() {
     try {
       const res = await api.post<ApiResponse<{ payment: Payment; checkoutUrl: string }>>('/payments/checkout', {
         type: 'DUES',
-        amount: 150,
       });
       const payment = res.data?.payment;
       const checkoutUrl = res.data?.checkoutUrl;
@@ -89,7 +91,7 @@ export default function PaymentsScreen() {
                 <Ionicons name="card" size={24} color={IteoColors.black} />
               </View>
               <Text style={[styles.duesTitle, { color: theme.text }]}>Oda Aidatı</Text>
-              <Text style={[styles.duesAmount, { color: theme.text }]}>150 ₺</Text>
+              <Text style={[styles.duesAmount, { color: theme.text }]}>{duesAmount.toLocaleString('tr-TR')} ₺</Text>
               <Button title={paying ? 'İşleniyor...' : 'Hemen Öde'} icon="lock-closed" loading={paying} onPress={startPayment} style={{ marginTop: spacing.md }} />
             </Card>
             {actionError || paymentsQuery.error ? <ErrorText>{actionError ?? paymentsQuery.error?.message}</ErrorText> : null}

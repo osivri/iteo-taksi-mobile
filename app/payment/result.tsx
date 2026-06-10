@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,11 +13,22 @@ interface PaymentStatus {
   status: string;
 }
 
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLLS = 10;
+
 export default function PaymentResultScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const [payment, setPayment] = useState<PaymentStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchPayment = useCallback(async () => {
+    if (!id) throw new Error('Ödeme kaydı bulunamadı.');
+    const res = await api.get<ApiResponse<PaymentStatus>>(`/payments/${id}`);
+    if (!res.data) throw new Error('Ödeme kaydı bulunamadı.');
+    return res.data;
+  }, [id]);
 
   useEffect(() => {
     if (!id) {
@@ -26,12 +37,39 @@ export default function PaymentResultScreen() {
       return;
     }
 
-    api
-      .get<ApiResponse<PaymentStatus>>(`/payments/${id}`)
-      .then((res) => setPayment(res.data ?? null))
-      .catch((e) => setError((e as Error).message))
-      .finally(() => setLoading(false));
-  }, [id]);
+    let cancelled = false;
+    let polls = 0;
+
+    async function loadWithPolling() {
+      try {
+        let current = await fetchPayment();
+        if (cancelled) return;
+        setPayment(current);
+        setLoading(false);
+
+        while (current.status === 'PENDING' && polls < MAX_POLLS && !cancelled) {
+          setPolling(true);
+          await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+          polls += 1;
+          current = await fetchPayment();
+          if (cancelled) return;
+          setPayment(current);
+        }
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setPolling(false);
+        }
+      }
+    }
+
+    loadWithPolling();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, fetchPayment]);
 
   if (loading) {
     return (
@@ -39,6 +77,7 @@ export default function PaymentResultScreen() {
         <Stack.Screen options={{ headerShown: true, title: 'Ödeme Sonucu' }} />
         <View style={styles.container}>
           <Loader />
+          <Text style={styles.pollingHint}>Ödeme durumu kontrol ediliyor...</Text>
         </View>
       </>
     );
@@ -78,11 +117,30 @@ export default function PaymentResultScreen() {
           {success
             ? 'Ödemeniz kaydedildi. Dekontu ödeme detayından görüntüleyebilirsiniz.'
             : pending
-              ? 'Ödeme henüz tamamlanmadı. Birkaç dakika sonra tekrar kontrol edin.'
+              ? polling
+                ? 'Ödeme işleniyor, lütfen bekleyin...'
+                : 'Ödeme henüz tamamlanmadı. Birkaç dakika sonra tekrar kontrol edin.'
               : 'Ödeme tamamlanamadı. Lütfen tekrar deneyin veya oda ile iletişime geçin.'}
         </Text>
 
         <View style={styles.actions}>
+          {pending ? (
+            <Button
+              title="Yenile"
+              icon="refresh"
+              onPress={async () => {
+                setPolling(true);
+                try {
+                  const next = await fetchPayment();
+                  setPayment(next);
+                } catch (e) {
+                  setError((e as Error).message);
+                } finally {
+                  setPolling(false);
+                }
+              }}
+            />
+          ) : null}
           <Button title="Ödeme Detayı" icon="receipt" onPress={() => router.replace(`/payment/${payment.id}`)} />
           <Button title="Ödemelere Dön" variant="ghost" onPress={() => router.replace('/(tabs)/payments')} style={styles.outlineDark} />
         </View>
@@ -97,6 +155,7 @@ const styles = StyleSheet.create({
   title: { color: IteoColors.white, fontSize: fontSize.display, fontWeight: '900', letterSpacing: -0.5 },
   amount: { color: IteoColors.yellow, fontSize: fontSize.hero, fontWeight: '900', marginTop: spacing.md, letterSpacing: -1 },
   hint: { color: '#A3A3A3', textAlign: 'center', marginTop: spacing.lg, lineHeight: 22, fontSize: fontSize.md },
+  pollingHint: { color: '#A3A3A3', marginTop: spacing.md, fontSize: fontSize.sm },
   actions: { width: '100%', marginTop: spacing.xxl, gap: spacing.md },
   outlineDark: { borderWidth: 1.5, borderColor: '#404040' },
 });

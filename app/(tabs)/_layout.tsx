@@ -114,10 +114,6 @@ export default function TabLayout() {
     return <Redirect href="/kvkk" />;
   }
 
-  if (addressOk === false) {
-    return <Redirect href="/address" />;
-  }
-
   const roleTab = (name: RoleTabName) => ({
     title: tabLabel(name, role),
     href: isTabVisible(name, role) ? undefined : (null as never),

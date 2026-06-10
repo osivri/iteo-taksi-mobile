@@ -153,6 +153,14 @@ export default function LoginScreen() {
               onPress={handleSubmit}
               style={{ marginTop: spacing.xs }}
             />
+            {mode === 'login' ? (
+              <>
+                <Pressable onPress={() => router.push('/forgot-password')} style={{ marginTop: spacing.md, alignSelf: 'center' }}>
+                  <Text style={{ color: IteoColors.yellow, fontWeight: '700' }}>Şifremi unuttum</Text>
+                </Pressable>
+                <Button title="Telefon ile Giriş (OTP)" variant="ghost" icon="call-outline" onPress={() => router.push('/otp-login')} style={{ marginTop: spacing.sm }} />
+              </>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
+import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
 import { api } from '@/lib/api';
 
 Notifications.setNotificationHandler({
@@ -15,9 +17,43 @@ Notifications.setNotificationHandler({
   }),
 });
 
+function navigateFromNotificationData(data: Record<string, unknown> | undefined) {
+  if (!data) return;
+  const screen = typeof data.screen === 'string' ? data.screen : null;
+  const type = typeof data.type === 'string' ? data.type : null;
+
+  if (screen) {
+    router.push(screen as never);
+    return;
+  }
+
+  if (type === 'APPOINTMENT') router.push('/(tabs)/appointments');
+  else if (type === 'PAYMENT') router.push('/(tabs)/payments');
+  else if (type === 'REMINDER') router.push('/(tabs)/vehicles');
+  else router.push('/notifications');
+}
+
+function handleDeepLink(url: string) {
+  const parsed = Linking.parse(url);
+  if (parsed.path === 'payment/result' && parsed.queryParams?.id) {
+    router.push({ pathname: '/payment/result', params: { id: String(parsed.queryParams.id) } });
+  } else if (parsed.path === 'reset-password') {
+    router.push('/reset-password');
+  }
+}
+
 export function usePushNotifications(enabled = true) {
   useEffect(() => {
     if (!enabled || Platform.OS === 'web') return;
+
+    const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      navigateFromNotificationData(response.notification.request.content.data as Record<string, unknown>);
+    });
+
+    const linkSub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink(url);
+    });
 
     async function register() {
       if (!Device.isDevice) return;
@@ -53,10 +89,15 @@ export function usePushNotifications(enabled = true) {
           platform,
         });
       } catch {
-        // Token kaydı sessizce atlanır; oturum henüz hazır olmayabilir
+        // Token kaydı sessizce atlanır
       }
     }
 
     register().catch(() => undefined);
+
+    return () => {
+      responseSub.remove();
+      linkSub.remove();
+    };
   }, [enabled]);
 }

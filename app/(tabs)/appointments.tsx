@@ -47,20 +47,34 @@ export default function AppointmentsScreen() {
   const loading = appointmentsQuery.isLoading && items.length === 0;
   const [tab, setTab] = useState<TabType>('HOTEL');
   const [description, setDescription] = useState('');
+  const [guestCount, setGuestCount] = useState(2);
+  const [requestedDate, setRequestedDate] = useState(new Date());
   const [plateNumber, setPlateNumber] = useState('');
   const [serviceType, setServiceType] = useState('Periyodik bakım');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function shiftDate(days: number) {
+    const next = new Date(requestedDate);
+    next.setDate(next.getDate() + days);
+    setRequestedDate(next);
+  }
+
   async function createRequest() {
+    if (!description.trim()) {
+      setError('Açıklama zorunludur.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
+      const dateIso = requestedDate.toISOString();
       if (tab === 'HOTEL') {
-        await api.post('/appointments', { type: 'HOTEL', requestedDate: new Date().toISOString(), description, guestCount: 2 });
+        await api.post('/appointments', { type: 'HOTEL', requestedDate: dateIso, description: description.trim(), guestCount });
         setDescription('');
       } else {
-        await api.post('/appointments', { type: 'AUTO_SERVICE', requestedDate: new Date().toISOString(), description, plateNumber, serviceType });
+        if (!plateNumber.trim()) throw new Error('Plaka zorunludur.');
+        await api.post('/appointments', { type: 'AUTO_SERVICE', requestedDate: dateIso, description: description.trim(), plateNumber: plateNumber.trim(), serviceType });
         setDescription('');
         setPlateNumber('');
       }
@@ -101,6 +115,21 @@ export default function AppointmentsScreen() {
                 ]}
                 style={{ marginBottom: spacing.lg }}
               />
+              <View style={styles.dateRow}>
+                <Button title="-" variant="ghost" onPress={() => shiftDate(-1)} />
+                <Text style={{ color: theme.text, fontWeight: '800', flex: 1, textAlign: 'center' }}>
+                  {requestedDate.toLocaleDateString('tr-TR')}
+                </Text>
+                <Button title="+" variant="ghost" onPress={() => shiftDate(1)} />
+              </View>
+              {tab === 'HOTEL' ? (
+                <View style={styles.dateRow}>
+                  <Text style={{ color: theme.text, fontWeight: '700' }}>Kişi sayısı</Text>
+                  <Button title="-" variant="ghost" onPress={() => setGuestCount((n) => Math.max(1, n - 1))} />
+                  <Text style={{ color: theme.text, fontWeight: '900' }}>{guestCount}</Text>
+                  <Button title="+" variant="ghost" onPress={() => setGuestCount((n) => Math.min(10, n + 1))} />
+                </View>
+              ) : null}
               {tab === 'AUTO_SERVICE' ? (
                 <>
                   <Field label="Plaka" icon="car-outline" placeholder="34 ABC 123" value={plateNumber} onChangeText={setPlateNumber} autoCapitalize="characters" />
@@ -163,4 +192,5 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: fontSize.lg, fontWeight: '800' },
   cancelBtn: { marginTop: spacing.md, alignSelf: 'flex-start' },
   cancelText: { color: IteoColors.error, fontWeight: '800', fontSize: fontSize.sm },
+  dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md, gap: spacing.sm },
 });

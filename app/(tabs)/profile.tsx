@@ -122,7 +122,7 @@ export default function ProfileScreen() {
 
   async function handleLogout() {
     await signOut();
-    router.replace('/login');
+    router.replace('/welcome');
   }
 
   const displayName = editing ? firstName : profile?.firstName ?? '';

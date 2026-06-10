@@ -6,7 +6,7 @@ import { IteoColors } from '@/constants/Colors';
 import { fontSize, radius, shadow, spacing } from '@/constants/theme';
 import { useOhsList } from '@/hooks/queries/lists';
 import { api, ApiResponse } from '@/lib/api';
-import { Button, Card, Field, Loader, SectionTitle, useTheme } from '@/components/ui';
+import { Button, Card, EmptyState, Field, Loader, SectionTitle, useTheme } from '@/components/ui';
 
 interface OhsContent {
   id: string;
@@ -81,7 +81,7 @@ export default function OhsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={loading ? <Loader /> : null}
+        ListEmptyComponent={loading ? <Loader /> : <EmptyState icon="shield-outline" title="İçerik yok" message="Henüz İSG içeriği yayınlanmadı." />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         renderItem={({ item }) => (
           <Pressable

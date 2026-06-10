@@ -43,7 +43,7 @@ export function DriverHome({ theme, period, onPeriodChange, summary, error }: Pr
           { title: 'Hasılat Ekle', href: '/(tabs)/finance', icon: 'add-circle-outline' },
           { title: 'Boş Araçlar', href: '/(tabs)/vehicles', icon: 'search-outline' },
           { title: 'Unutulan Eşya', href: '/forgotten-items', icon: 'briefcase-outline' },
-          { title: 'Randevu', href: '/(tabs)/appointments', icon: 'calendar-outline' },
+          { title: 'Puanlarım', href: '/ratings', icon: 'star-outline' },
         ]}
       />
     </>
